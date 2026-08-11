@@ -1,0 +1,73 @@
+/* TeacherBoard v3: editable objects + unified shapes + responsive layout */
+.board{overflow:visible}
+.tb-object-layer{position:absolute;inset:0;z-index:5;pointer-events:none;overflow:visible}
+body.tb-select-mode .tb-object-layer{pointer-events:auto}
+.tb-object{position:absolute;box-sizing:border-box;touch-action:none;user-select:none;pointer-events:auto;transform-origin:center;min-width:28px;min-height:28px}
+.tb-object svg,.tb-object img{width:100%;height:100%;display:block;pointer-events:none;object-fit:contain}
+.tb-object.selected{outline:2px solid #245d55;outline-offset:3px}
+.tb-object-handle{display:none;position:absolute;z-index:3;width:18px;height:18px;border:2px solid #fff;background:#245d55;box-shadow:0 1px 5px rgba(0,0,0,.2)}
+.tb-object.selected .tb-object-handle{display:block}
+.tb-resize-handle{right:-11px;bottom:-11px;border-radius:50%;cursor:nwse-resize}
+.tb-delete-handle{right:-12px;top:-12px;border-radius:50%;color:#fff;font-size:14px;line-height:13px;text-align:center;cursor:pointer;padding:0}
+.tb-shape-preview{position:absolute;z-index:7;border:2px dashed #245d55;background:rgba(36,93,85,.05);pointer-events:none}
+.tb-select-tool{order:-10}
+.tb-selected-properties{display:none;align-items:center;gap:5px;padding:0 7px;height:38px;border:1px solid var(--border);border-radius:10px;background:#fff;font-size:11px;color:var(--muted)}
+body.tb-select-mode.tb-has-selection .tb-selected-properties{display:flex}
+.tb-selected-properties button{border:0;background:transparent;color:var(--danger);font-weight:700;padding:4px;cursor:pointer}
+
+/* Unified shape menu. Old canvas-only geometry controls stay hidden. */
+.toolbar [data-tool="line"],.toolbar [data-tool="rect"],.toolbar [data-tool="ellipse"],.shape-launcher{display:none!important}
+.tb-shape-launcher{display:flex!important}
+.shape-popover{display:none!important}
+.tb-shape-menu{position:fixed;z-index:1000;width:270px;max-height:min(560px,75vh);overflow:auto;padding:8px;border:1px solid var(--border);border-radius:14px;background:#fff;box-shadow:0 16px 45px rgba(31,44,41,.18)}
+.tb-shape-menu[hidden]{display:none}
+.tb-shape-menu h4{margin:7px 8px 5px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.tb-shape-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.tb-shape-menu button{min-height:38px;border:1px solid var(--border);border-radius:9px;background:#fff;text-align:left;padding:7px 8px;color:var(--text);font-size:12px}
+.tb-shape-menu button:hover{background:var(--panel-2);border-color:#b9ccc4}
+.math-panel .stack-actions{display:none}
+
+/* A practical compact page strip. */
+.pagebar{min-height:58px}
+.page-tab{min-width:112px!important;max-width:150px!important;padding:5px 8px!important}
+.page-thumb{width:34px!important;height:21px!important}
+.page-menu-btn{width:22px!important;height:28px!important}
+
+/* Responsive top bar: never break the board because controls don't fit. */
+.topbar{min-width:0}
+.top-actions{min-width:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;padding-bottom:2px;white-space:nowrap}
+.view-actions{flex:0 0 auto}
+.pen-controls{flex:0 0 auto}
+@media(max-width:1250px){
+  .brand{min-width:150px!important}.brand span{display:none}
+  .pen-controls .control-label{display:none}
+  .color-swatches .color-swatch:nth-child(n+5){display:none}
+  #saveLessonPdfBtn,.presentation-btn{font-size:0;width:40px;padding:0}
+  #saveLessonPdfBtn::first-letter,.presentation-btn::first-letter{font-size:16px}
+}
+@media(max-width:950px){
+  .app-shell{grid-template-rows:60px minmax(0,1fr) 60px!important}
+  .topbar{padding:6px 8px!important;gap:7px!important}
+  .brand{min-width:42px!important}.brand>div:last-child{display:none}
+  .brand-mark{width:34px!important;height:34px!important}
+  .top-actions{gap:4px!important}
+  .view-actions{gap:3px!important}
+  .pen-controls{padding:3px 5px!important;gap:4px!important}
+  .color-swatches{gap:3px!important}.color-swatch{width:18px!important;height:18px!important}
+  #customColor{width:25px!important;height:25px!important}
+  #quickWidth{width:42px!important}
+  .workspace,.workspace.math-closed{grid-template-columns:50px minmax(0,1fr) 0!important}
+  .workspace:not(.math-closed){grid-template-columns:50px minmax(0,1fr) min(290px,72vw)!important}
+  .toolbar{padding:5px 3px!important}.tool{min-height:42px!important}
+  .board-wrap{padding:5px!important}.board-viewport{padding:4px!important}
+  .pagebar{padding:5px 8px!important}.pagebar-label,.autosave-state{display:none!important}
+}
+@media(max-width:680px){
+  .view-actions .zoom-label,#zoomInBtn,#zoomOutBtn{display:none}
+  .color-swatches .color-swatch:nth-child(n+4){display:none}
+  .top-actions .action-btn{width:36px!important;min-width:36px!important}
+  .tb-selected-properties{position:fixed;left:58px;bottom:65px;z-index:80;box-shadow:0 6px 22px rgba(0,0,0,.12)}
+  .page-tab{min-width:100px!important}
+}
+body.presentation-mode .tb-object.selected{outline:none}
+body.presentation-mode .tb-object-handle{display:none!important}
