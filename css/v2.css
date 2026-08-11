@@ -1,0 +1,46 @@
+/* TeacherBoard v2 */
+:root{--tb-accent:#245d55;--tb-soft:#dfece7;--tb-border:#d9e3dd;--tb-paper:#fffefa}
+.top-actions{min-width:0}
+.pen-controls{display:flex;align-items:center;gap:7px;padding:5px 8px;border:1px solid var(--border);background:#fff;border-radius:11px;white-space:nowrap}
+.pen-controls .control-label{font-size:11px;color:var(--muted)}
+.color-swatches{display:flex;gap:5px}
+.color-swatch{width:24px;height:24px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px var(--border);padding:0;min-height:0}
+.color-swatch.active{box-shadow:0 0 0 2px var(--accent)}
+#customColor{width:28px;height:28px;padding:1px;border:0;background:transparent}
+#quickWidth{height:30px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--muted);font-size:11px}
+.toolbar{overflow:visible!important;position:relative;z-index:12}
+.shape-menu-wrap{position:relative}
+.shape-popover{position:fixed;left:62px;top:250px;width:210px;padding:8px;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 16px 40px rgba(31,44,41,.16);display:grid;grid-template-columns:1fr 1fr;gap:6px;z-index:80}
+.shape-popover[hidden]{display:none}
+.shape-popover button{border:1px solid var(--border);background:#fff;border-radius:9px;padding:8px 6px;text-align:left;font-size:12px}
+.shape-popover button:hover{background:var(--panel-2)}
+.page-tab{padding-right:34px}
+.page-menu-btn{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:24px;height:24px;border:0;background:transparent;border-radius:7px;font-size:16px;color:var(--muted);padding:0}
+.page-menu-btn:hover{background:rgba(36,93,85,.08)}
+.page-context{position:fixed;z-index:100;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 14px 40px rgba(31,44,41,.16);padding:6px;min-width:150px}
+.page-context[hidden]{display:none}
+.page-context button{display:block;width:100%;border:0;background:transparent;text-align:left;padding:8px 10px;border-radius:7px;font-size:12px}
+.page-context button:hover{background:var(--panel-2)}
+.page-context .danger{color:#9b4f49}
+.pagebar.collapsed{height:30px;min-height:30px;padding:3px 10px}
+.pagebar.collapsed .pages,.pagebar.collapsed .add-page,.pagebar.collapsed .autosave-state{display:none}
+.pagebar-toggle{border:0;background:transparent;color:var(--muted);font-size:16px;padding:4px 7px;border-radius:7px}
+.pagebar-toggle:hover{background:rgba(36,93,85,.08)}
+.presentation-btn{color:var(--accent)}
+.fit-btn{font-size:17px}
+.presentation-mode .topbar,.presentation-mode .pagebar,.presentation-mode .math-panel{display:none!important}
+.presentation-mode .app-shell{grid-template-rows:1fr}
+.presentation-mode .workspace,.presentation-mode .workspace.math-closed{grid-template-columns:50px minmax(0,1fr)!important;height:100vh}
+.presentation-mode .toolbar{position:fixed;left:10px;top:50%;transform:translateY(-50%);width:48px;max-height:72vh;border:1px solid var(--border);border-radius:14px;background:rgba(248,250,247,.96);box-shadow:0 12px 35px rgba(36,93,85,.16);padding:7px 4px;z-index:90}
+.presentation-mode .toolbar .tool{display:none}
+.presentation-mode .toolbar .tool[data-tool="pen"],.presentation-mode .toolbar .tool[data-tool="eraser"],.presentation-mode .toolbar .tool[data-tool="laser"]{display:flex}
+.presentation-mode .board-wrap{grid-column:1/-1;padding:6px}
+.presentation-exit{display:none;position:fixed;right:14px;top:14px;z-index:100;border:1px solid var(--border);background:#fff;border-radius:10px;padding:8px 12px;box-shadow:0 8px 25px rgba(31,44,41,.14)}
+.presentation-mode .presentation-exit{display:block}
+.board{aspect-ratio:auto!important;min-height:900px;height:auto}
+.board canvas{height:100%!important}
+.text-layer{height:100%}
+.extend-page{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);z-index:7;border:1px dashed #9ab8ad;background:rgba(255,255,255,.9);color:var(--accent);border-radius:20px;padding:7px 13px;font-size:12px}
+.board.is-drawing .extend-page{opacity:.2}
+@media(max-width:1200px){.pen-controls .control-label{display:none}.color-swatch{width:21px;height:21px}.pen-controls{gap:5px;padding:4px 6px}}
+@media(max-width:900px){.pen-controls{display:none}.presentation-btn .long-label{display:none}}
