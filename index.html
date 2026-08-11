@@ -7,18 +7,15 @@
   <title>TeacherBoard — Дошка для занять</title>
   <link rel="stylesheet" href="css/style.css" />
   <link rel="stylesheet" href="css/compact.css" />
+  <link rel="stylesheet" href="css/v2.css" />
 </head>
 <body>
   <div class="app-shell">
     <header class="topbar">
       <div class="brand">
         <div class="brand-mark">TB</div>
-        <div>
-          <strong>TeacherBoard</strong>
-          <span>Дошка для занять</span>
-        </div>
+        <div><strong>TeacherBoard</strong><span>Дошка для занять</span></div>
       </div>
-
       <div class="top-actions" aria-label="Основні дії">
         <button class="icon-btn" id="undoBtn" title="Скасувати">↶</button>
         <button class="icon-btn" id="redoBtn" title="Повторити">↷</button>
@@ -27,7 +24,6 @@
         <button class="action-btn" id="savePngBtn">⇩ PNG</button>
         <button class="action-btn danger-soft" id="clearBtn">Очистити</button>
       </div>
-
       <div class="view-actions">
         <button class="icon-btn" id="zoomOutBtn" title="Зменшити">−</button>
         <span class="zoom-label" id="zoomLabel">100%</span>
@@ -49,15 +45,9 @@
         <button class="tool" data-tool="text" title="Текст"><span>T</span><em>Текст</em></button>
         <button class="tool" data-tool="curtain" title="Шторка"><span>◫</span><em>Шторка</em></button>
         <button class="tool" data-tool="laser" title="Лазерна указка"><span>●</span><em>Лазер</em></button>
-
         <div class="tool-options">
           <input id="colorPicker" type="color" value="#245d55" title="Колір" />
-          <select id="lineWidth" title="Товщина">
-            <option value="2">2 px</option>
-            <option value="4" selected>4 px</option>
-            <option value="6">6 px</option>
-            <option value="10">10 px</option>
-          </select>
+          <select id="lineWidth" title="Товщина"><option value="2">2 px</option><option value="4" selected>4 px</option><option value="6">6 px</option><option value="10">10 px</option></select>
         </div>
       </aside>
 
@@ -72,68 +62,31 @@
       </section>
 
       <aside class="math-panel" id="mathPanel">
-        <div class="panel-head">
-          <div>
-            <strong>Математичні інструменти</strong>
-            <span>Швидкі вставки</span>
-          </div>
-          <button class="icon-btn" id="closeMathBtn">×</button>
-        </div>
-
+        <div class="panel-head"><div><strong>Математичні інструменти</strong><span>Швидкі вставки</span></div><button class="icon-btn" id="closeMathBtn">×</button></div>
         <section class="panel-section">
           <h3>Фон дошки</h3>
-          <div class="segmented grid-2" id="backgroundButtons">
-            <button data-bg="clean" class="selected">Чистий</button>
-            <button data-bg="grid">Клітинка</button>
-            <button data-bg="lines">Лінії</button>
-            <button data-bg="coords">Координатна</button>
-          </div>
+          <div class="segmented grid-2" id="backgroundButtons"><button data-bg="clean" class="selected">Чистий</button><button data-bg="grid">Клітинка</button><button data-bg="lines">Лінії</button><button data-bg="coords">Координатна</button></div>
         </section>
-
         <section class="panel-section">
           <h3>Швидкі символи</h3>
-          <div class="symbols" id="symbolButtons">
-            <button>√</button><button>π</button><button>±</button><button>≠</button>
-            <button>≤</button><button>≥</button><button>∞</button><button>∠</button>
-            <button>°</button><button>×</button><button>÷</button><button>≈</button>
-            <button>²</button><button>³</button><button>∑</button><button>∫</button>
-          </div>
+          <div class="symbols" id="symbolButtons"><button>√</button><button>π</button><button>±</button><button>≠</button><button>≤</button><button>≥</button><button>∞</button><button>∠</button><button>°</button><button>×</button><button>÷</button><button>≈</button><button>²</button><button>³</button><button>∑</button><button>∫</button></div>
         </section>
-
         <section class="panel-section">
           <h3>Заготовки</h3>
-          <div class="stack-actions">
-            <button id="insertAxesBtn">＋ Координатні осі</button>
-            <button id="insertNumberLineBtn">＋ Числова пряма</button>
-            <button id="insertXYTableBtn">＋ Таблиця x / y</button>
-          </div>
+          <div class="stack-actions"><button id="insertAxesBtn">＋ Координатні осі</button><button id="insertNumberLineBtn">＋ Числова пряма</button><button id="insertXYTableBtn">＋ Таблиця x / y</button></div>
         </section>
-
         <p class="panel-note">Порада: скріншот із буфера можна вставити комбінацією <strong>Ctrl+V</strong>.</p>
       </aside>
     </main>
 
-    <footer class="pagebar">
-      <div class="pagebar-label">Сторінки</div>
-      <div class="pages" id="pages"></div>
-      <button class="add-page" id="addPageBtn" title="Нова сторінка">＋</button>
-      <div class="autosave-state" id="autosaveState">Збережено</div>
-    </footer>
+    <footer class="pagebar"><div class="pagebar-label">Сторінки</div><div class="pages" id="pages"></div><button class="add-page" id="addPageBtn" title="Нова сторінка">＋</button><div class="autosave-state" id="autosaveState">Збережено</div></footer>
   </div>
 
   <input id="imageInput" type="file" accept="image/*" hidden />
-
-  <dialog id="textDialog">
-    <form method="dialog" class="dialog-card" id="textForm">
-      <h2>Додати текст</h2>
-      <textarea id="textInput" rows="4" placeholder="Введіть текст або формулу"></textarea>
-      <div class="dialog-actions">
-        <button value="cancel" class="secondary">Скасувати</button>
-        <button value="default" id="textConfirmBtn">Додати</button>
-      </div>
-    </form>
-  </dialog>
+  <dialog id="textDialog"><form method="dialog" class="dialog-card" id="textForm"><h2>Додати текст</h2><textarea id="textInput" rows="4" placeholder="Введіть текст або формулу"></textarea><div class="dialog-actions"><button value="cancel" class="secondary">Скасувати</button><button value="default" id="textConfirmBtn">Додати</button></div></form></dialog>
 
   <script src="js/app.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha512-qZvrmS2ekKPF2mSznTQsxqPgnpkI4DNTlrdUmTzrDgektczlKNRRhy5X5AAc6wWZKJ2fKtw5bkf0f4Qx0hwRbg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="js/v2.js"></script>
 </body>
 </html>
