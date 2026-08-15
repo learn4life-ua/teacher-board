@@ -4,176 +4,199 @@
 
 ## Контури перевірки
 
-### Автоматично після змін
+### Ручний Validate
 
-`Validate TeacherBoard Next` запускається автоматично та перевіряє:
+`Validate TeacherBoard Next` **не запускається автоматично** після комітів. Workflow має тільки `workflow_dispatch`, щоб проміжні зміни не створювали GitHub Actions-листи. Перед релізом його запускаємо один раз вручну.
+
+Validate перевіряє:
 - синтаксис JavaScript, import-шляхи, критичні модулі та DOM-контракт `preview.html`;
-- безпечний mathematical parser без `Function/eval`, природні записи та performance-ліміти графіка;
-- прозору гумку та напівпрозорий маркер;
+- safe mathematical parser без `Function/eval`, natural notation та performance-ліміти графіка;
+- graph/text SVG/HTML safety;
+- прозору гумку й marker opacity;
 - zoom 50–200% із кроком 25%, client→scene/drag delta та один простір 1600×900;
 - resize повернутих object/instrument елементів у локальних осях;
-- збереження пропорцій image object при resize на 0°/45°/90°;
+- aspect ratio image object, коло 1:1 та resize line/arrow тільки по довжині;
+- bounds-check для надмірних координат/розмірів у storage і runtime resize;
 - геометрію транспортира/циркуля після rotation;
 - clear → undo → redo, ізоляцію history між сторінками та ліміт 50 snapshot;
-- відсутність порожніх Undo-кроків при простому tap/select без руху;
-- text/graph editing через panel-contract;
-- page rename/destructive actions через власні dialogs та non-blocking notices замість browser popup;
+- відсутність порожніх Undo-кроків при no-op tap/select/background/update;
+- multi-touch pointerId-контракт для drawing, shapes, objects та geometry tools;
+- shape gesture threshold 8 px і directed line/arrow creation;
+- text/graph editing через properties panel;
+- page rename/destructive actions через власні dialogs та non-blocking notices;
 - memory-safe обробку великих зображень через Blob URL;
 - відновлення пошкодженого `teacherboard.v2` до безпечного runtime state;
-- `saveState()` при QuotaExceededError повертає `false`, а не ламає виконання;
-- legacy `number5`, `number10`, `numberBlank` → новий `numberLine` зі збереженням діапазону й підписів;
-- швидкі математичні символи вставляються в позицію курсора.
+- `saveState()` при QuotaExceededError;
+- legacy `number5`, `number10`, `numberBlank` → `numberLine`;
+- PNG composition contract;
+- keyboard focus safety;
+- laser exclusivity;
+- правило, що в режимах малювання objects/instruments не перехоплюють pointer events.
 
-### Вручну перед релізом
+### Ручний Browser Smoke
 
-`Browser Smoke TeacherBoard Next` збережений у репозиторії, але **не запускається автоматично після кожного коміту**, щоб не створювати зайві GitHub-сповіщення. Його запускаємо вручну після стабілізації змін.
+`Browser Smoke TeacherBoard Next` також має тільки ручний запуск. Попередні успішні Chromium-прогони вже підтвердили migration/rollback, desktop/tablet/Android viewport, shape objects, curtain, text, graph scale, responsive drawer, geometry builds, autosave, pages, transparent eraser та реальне PNG download.
 
-Останні успішні browser-smoke сценарії вже підтвердили:
-- migration/rollback `teacherboard.v1` → `teacherboard.v2`;
-- старт із закритим меню фігур та активним «Вибір»;
-- фігури як `.scene-object`;
-- шторку та undo/redo;
-- текст і графік із числовою шкалою;
-- responsive drawer;
-- лінійку на desktop/tablet/Android;
-- побудови лінійкою, транспортиром і циркулем;
-- autosave object state;
-- add/duplicate/rename/delete сторінок на desktop/tablet;
-- прозору гумку та реальне PNG download у Chromium.
-
-Автоматичні тести не замінюють короткий реальний touch-тест на фізичному пристрої.
+Після останніх touch/shape/bounds змін потрібен **один фінальний ручний прогін** обох workflow перед merge.
 
 ## 1. Запуск і збереження
 
 - [ ] `preview.html` відкривається без помилок у консолі на фізичному пристрої.
-- [ ] Після перезавантаження зберігаються сторінки, фон, об'єкти, штрихи та інструменти.
-- [x] Static storage-check підтверджує безпечний `false` при QuotaExceededError.
-- [x] Пошкоджений v2-state санітизується до валідного runtime state.
-- [x] Старий нестандартний zoom нормалізується вже при loadState.
-- [x] Великі зображення використовують memory-safe Blob URL path та max dimension 1600 px.
-- [ ] Фізично перевірити велике фото з телефона.
+- [ ] Після reload зберігаються сторінки, фон, об'єкти, штрихи та інструменти.
+- [x] Storage нормалізує нестандартний zoom при loadState.
+- [x] Пошкоджений v2-state санітизується.
+- [x] Надмірні object/instrument coordinates та dimensions обмежуються safe bounds.
+- [x] QuotaExceededError не кидається назовні із `saveState()`.
+- [x] Великі image files використовують Blob URL path і max source dimension 1600 px.
+- [ ] Фізично вставити велике фото з телефона й reload сторінку.
 - [ ] Перемикання сторінок не змішує їхній вміст.
-- [x] Browser smoke підтвердив object autosave.
-- [x] Додавання/дублювання сторінки проходили browser smoke.
-- [x] Перейменування/видалення сторінки перевірені на desktop/tablet browser smoke.
-- [x] Перейменування, очищення й видалення більше не використовують системні `prompt/confirm`.
-- [ ] Повторно прогнати Android pagebar після останнього CSS-виправлення.
-- [x] Static history-check підтверджує clear → undo → redo.
+- [x] Повторний tap по вже активній сторінці не скидає Undo history.
+- [ ] Повторно перевірити Android pagebar після останніх змін.
 
 ## 2. Малювання
 
-- [x] Pointer→scene для 75%, 100%, 125%, 150% перевіряється автоматично.
-- [ ] Фізично перевірити ручку без стрибків на 75%, 100%, 125%, 150% zoom.
-- [x] Маркер використовує `globalAlpha = 0.24`.
-- [x] Гумка прибирає alpha drawing canvas через `destination-out`.
-- [ ] На grid/coords фоні візуально перевірити, що після гумки фон лишається видимим.
-- [ ] Undo/redo працює після кількох реальних штрихів пальцем/мишкою.
+- [x] Pointer→scene math покриває всі zoom presets.
+- [x] Marker використовує `globalAlpha = 0.24`.
+- [x] Eraser використовує `destination-out`.
+- [x] Freehand зберігає один active `pointerId`; другий палець не перехоплює stroke.
+- [x] Objects та geometry tools не перехоплюють pointer events, коли активна ручка/маркер/гумка/shape tool.
+- [ ] Фізично перевірити ручку на 75%, 100%, 125%, 150%.
+- [ ] Намалювати поверх існуючої фігури та біля видимої лінійки.
+- [ ] На grid/coords перевірити, що гумка відкриває фон, а не залишає білу смугу.
+- [ ] Двома пальцями переконатися, що другий pointer не завершує stroke першого.
+- [ ] Undo/redo після кількох реальних штрихів.
 
-## 3. Об'єкти
+## 3. Фігури та object layer
 
-- [x] Фігура створюється як окремий object-layer елемент.
-- [x] Меню фігур закрите після відкриття; стартовий інструмент — «Вибір».
-- [x] Шторка є окремим об'єктом та підтримує undo/redo.
-- [x] Resize повернутих об'єктів використовує локальні осі rotation.
-- [x] Image resize автоматично перевіряється на збереження пропорцій при 0°/45°/90°.
-- [x] Простий tap/select без руху не створює порожній Undo snapshot.
-- [ ] Фігури можна пальцем вибирати, переміщати, масштабувати, повертати й видаляти.
-- [x] Legacy `number5`, `number10`, `numberBlank` перетворюються на `numberLine` з правильним діапазоном/підписами.
-- [ ] Стрілка, осі, числова пряма й таблиця x/y фізично перевірені як окремі об'єкти.
-- [x] Текст створювався у desktop/tablet/Android browser smoke.
-- [x] Text/graph мають touch-friendly кнопку ✎ та panel editing.
+- [x] Фігури — окремі scene objects, а не raster drawing.
+- [x] Меню фігур закрите на старті; стартовий інструмент — «Вибір».
+- [x] Shape gesture має мінімальний поріг 8 logical px.
+- [x] Shape gesture зберігає pointerId і type від pointerdown до pointerup.
+- [x] «Лінія» створює реальний directed segment від start до end.
+- [x] «Стрілка» зберігає довжину й напрямок gesture.
+- [x] Preview line/arrow показує напрямлений відрізок; arrow preview має вістря.
+- [x] «Коло» й «Еліпс» — окремі інструменти.
+- [x] Коло створюється й resize-иться тільки 1:1; persisted circle також нормалізується до square bounds.
+- [x] Line/arrow resize змінює довжину по локальній осі й не розтягує висоту.
+- [x] Image resize зберігає aspect ratio після rotation.
+- [x] Object manipulation зберігає один active pointerId.
+- [x] Простий tap/select без руху не створює Undo snapshot.
+- [x] Повторний updateSelected без фактичної зміни не створює Undo snapshot.
+- [x] Шторка є окремим редагованим object.
+- [x] Legacy number lines мігрують у новий `numberLine`.
+- [ ] Фізично перевірити circle/ellipse, line/arrow, triangle/rect та curtain.
+- [ ] Фізично перевірити move/resize/rotate/delete пальцем.
+- [ ] Перевірити, що короткий випадковий tap у shape mode нічого не створює.
+- [ ] Другий палець не завершує/не змінює активний shape/object gesture.
+- [ ] Стрілка, axes, numberLine і x/y table виглядають правильно після resize.
+
+## 4. Текст, зображення та математичні символи
+
+- [x] Text/graph мають touch-friendly кнопку ✎ і panel editing.
+- [x] Text markup escape-ить HTML та санітизує inline color.
 - [x] Математичні символи вставляються через `setRangeText` у позицію курсора.
-- [ ] Зображення вставляється з файлу на фізичному пристрої.
-- [ ] Зображення вставляється через paste зі скріншота на фізичному пристрої.
-- [ ] Resize зображення фізично перевірити після rotation.
-- [ ] Лазер фізично перевірити пальцем/мишкою.
+- [x] Global Ctrl/Cmd+Z/Delete/Backspace не перехоплюються під час введення у form fields.
+- [x] Clipboard підтримує `files` і `items/getAsFile()`.
+- [ ] Вставити image з file picker на фізичному пристрої.
+- [ ] Вставити screenshot через paste.
+- [ ] Resize/rotate image і reload без втрати пропорцій.
+- [ ] Перевірити символи √ π ± ≤ ≥ ∠ ° ² ³ ∑ ∫ у середині тексту.
 
-## 4. Графіки
+## 5. Графіки
 
-- [x] `x^2` будується у browser smoke.
-- [x] Числові підписи шкали та назви осей x/y присутні.
-- [x] Parser перевіряє `x^2`, `-x^2`, `2^-2`, `2x-3`, `3(x+1)`, `πx`, `sin`, `sqrt`, `abs`, десяткову кому, `×` і `÷`.
+- [x] Parser підтримує `x^2`, `-x^2`, `2^-2`, `2x-3`, `3(x+1)`, `πx`, `sin`, `sqrt`, `abs`, decimal comma, `×`, `÷`.
 - [x] Parser не використовує `new Function` або `eval`.
-- [x] Сторонні JS-ідентифікатори відхиляються.
-- [x] Екстремальний діапазон із малим кроком має grid/sample performance guards.
-- [ ] Межі x/y змінюють масштаб графіка в UI.
-- [ ] Крок шкали 0.5, 1, 2 відображається візуально коректно.
-- [ ] Вибраний графік можна оновити через кнопку ✎/панель після побудови.
-- [ ] Графік можна рухати та масштабувати як об'єкт.
+- [x] Сторонні JS identifiers відхиляються.
+- [x] Graph SVG escape-ить title/ARIA та санітизує curve color.
+- [x] Grid/sample performance guards обмежують DOM-навантаження.
+- [x] Числові labels і назви x/y присутні.
+- [ ] UI ranges x/y змінюють масштаб графіка.
+- [ ] Крок 0.5, 1, 2 візуально коректний.
+- [ ] ✎ відкриває поточну expression/ranges і Update працює.
+- [ ] Graph move/resize/rotate працює пальцем.
 
-## 5. Геометричні інструменти
+## 6. Геометричні інструменти
 
-- [x] Лінійка додавалася на desktop/tablet/Android у browser smoke.
-- [x] «Провести» створює редагований відрізок.
-- [x] Транспортир має readout кута та будує два промені.
-- [x] Циркуль має readout радіуса та режими «Коло»/«Дуга».
-- [x] Scene→local координати перевіряються при поворотах 30°/90°.
-- [x] Readout 60° у повернутого транспортира перевіряється автоматично.
-- [x] Радіус циркуля змінюється тільки вздовж локальної осі.
-- [x] Resize повернутих інструментів використовує локальні осі rotation.
-- [x] Візуальна відстань голка→олівець прив'язана до `radius`.
-- [x] Побудована дуга успадковує rotation циркуля.
-- [x] Простий tap по інструменту без руху не створює порожній Undo snapshot.
-- [ ] Лінійка рухається, повертається та змінює розмір пальцем/мишкою.
-- [ ] Візуально звірити відрізок із робочим краєм повернутої лінійки.
-- [ ] Транспортир рухається й повертається пальцем.
-- [ ] Мітка кута фізично регулюється в діапазоні 0–180°.
-- [ ] Циркуль рухається, повертається та змінює радіус пальцем.
-- [ ] Візуально звірити коло/дугу з положенням голки й олівця.
+- [x] Ruler/protractor/compass працюють у локальних координатах після rotation.
+- [x] Protractor angle handle працює в діапазоні 0–180°.
+- [x] Compass radius змінюється по локальній осі.
+- [x] Visual needle→pencil distance прив'язана до radius.
+- [x] Compass circle використовує окремий `circle` object.
+- [x] Побудована arc успадковує rotation compass.
+- [x] Geometry gesture зберігає active pointerId.
+- [x] Повторний click на вже активний compass mode не створює Undo snapshot.
+- [x] Geometry tools не можна повністю втягнути за межі сцени: щонайменше 40 px лишаються доступними.
+- [x] Runtime resize обмежений до 1600×900; ruler height — до 240 px.
+- [ ] Ruler move/rotate/resize пальцем; «Провести» збігається з робочим краєм.
+- [ ] Protractor move/rotate та angle handle фізично.
+- [ ] Compass move/rotate/radius; circle/arc збігаються з needle/pencil.
+- [ ] Другий палець не перехоплює активний geometry gesture.
 
-## 6. Zoom і координати
+## 7. Laser
 
-- [x] Scene, canvas, objects та instruments використовують один простір 1600×900.
-- [x] Zoom presets: 50%, 75%, 100%, 125%, 150%, 175%, 200%.
-- [x] Старі нестандартні zoom-значення нормалізуються до найближчого 25% при loadState.
-- [x] client→scene та drag delta перевіряються на всіх zoom presets.
-- [x] Object/instrument resize після rotation перевіряється в локальних осях.
-- [ ] Фізично підтвердити, що шари візуально не роз'їжджаються при zoom.
-- [ ] Фізично перевірити перетягування на 75%, 100%, 125%, 150%.
-- [ ] Шкала графіка та координатних осей залишається читабельною після resize.
+- [x] Laser — temporary overlay і не записує object/stroke.
+- [x] Laser не використовує pointer capture.
+- [x] Вибір ручки, shape, text, image або geometry tool автоматично вимикає laser.
+- [ ] Фізично перевірити pointer movement і завершення жесту поза дошкою.
+- [ ] Перемкнути Laser → Pen і Laser → Ruler: новий tool має одразу працювати.
 
-## 7. PNG-експорт
+## 8. Zoom і координати
 
-- [x] Browser smoke підтвердив реальну подію завантаження PNG у Chromium.
-- [ ] PNG містить фон, рукописні штрихи, фігури, текст, зображення і графік.
-- [ ] PNG містить видимі геометричні інструменти.
-- [ ] PNG не містить рамки виділення, handles та кнопки видалення/редагування.
-- [ ] Перевірити складну сторінку з кількома різними об'єктами.
+- [x] Scene, canvas, objects та instruments використовують один logical space 1600×900.
+- [x] Presets: 50%, 75%, 100%, 125%, 150%, 175%, 200%.
+- [x] client→scene та drag delta перевіряються на presets.
+- [x] Rotated resize працює в local axes.
+- [ ] Візуально перевірити, що background/canvas/objects/instruments не роз'їжджаються.
+- [ ] Перетягування на 75%, 100%, 125%, 150%.
+- [ ] Graph/axes labels залишаються читабельними після resize.
 
-## 8. Legacy-міграція
+## 9. PNG
 
-- [x] Chromium browser smoke підтверджує автоматичний перенос `teacherboard.v1` у v2.
-- [x] Старий PNG canvas переноситься як нижній locked image object 1600×900.
-- [x] Старі тексти переносяться як text objects зі збереженням координат і кольору.
-- [x] Locked legacy raster має `pointer-events: none`.
-- [x] Повторне відкриття після міграції не дублює об'єкти.
-- [x] При симульованій помилці запису v2 стара v1-копія відновлюється.
-- [x] `number5`, `number10`, `numberBlank` підтримуються як legacy aliases і не губляться у v1/старому v2.
-- [ ] Окремо перевірити одну реальну велику стару дошку перед merge.
+- [x] Export contract: 1600×900, background → drawing → objects → instruments.
+- [x] Exporter не збирає service handles/buttons.
+- [x] Попередній Browser Smoke підтвердив real Chromium download.
+- [ ] Складна сторінка: grid/coords + handwriting + shapes + text + image + graph + geometry tools.
+- [ ] PNG містить усі потрібні шари.
+- [ ] PNG не містить selection outline, resize/rotate/edit/delete controls.
+- [ ] Візуально звірити rotation text/image/graph/instruments.
 
-## 9. Фізичний touch-тест перед merge
+## 10. Legacy migration
+
+- [x] Попередній Chromium smoke підтвердив `teacherboard.v1` → v2.
+- [x] Старий raster canvas → locked lower image 1600×900.
+- [x] Legacy texts → text objects із координатами/кольором.
+- [x] Migration не дублюється після reload.
+- [x] Transactional rollback відновлює v1 при невдалому записі v2.
+- [x] Legacy number line aliases підтримуються у v1 та старому v2.
+- [ ] Перевірити одну реальну велику стару дошку перед merge.
+
+## 11. Фізичний touch-тест перед merge
 
 ### Desktop
-- [ ] Ручка → гумка → фігура → графік → інструмент → зображення → лазер → PNG.
+- [ ] Pen → eraser → line/arrow → circle/ellipse → graph → ruler/protractor/compass → image → laser → PNG.
 
 ### Tablet
-- [ ] Drag/resize/rotate фігур та інструментів.
-- [ ] Drawer + екранна клавіатура.
-- [ ] Лазер.
-- [ ] Pagebar і кнопки сторінок.
+- [ ] Object/instrument drag + local resize + rotate.
+- [ ] Multi-touch: другий палець не ламає активний gesture.
+- [ ] Drawer + keyboard.
+- [ ] Pagebar.
+- [ ] Laser → інший tool.
 
 ### Android phone
-- [ ] Drawer + visualViewport + клавіатура.
-- [ ] Pagebar: додати → дублювати → перейменувати → видалити.
-- [ ] Drag пальцем.
-- [ ] Лазер.
+- [ ] Drawer + visualViewport + keyboard.
+- [ ] Pagebar: add → duplicate → rename → delete.
+- [ ] Pen/eraser поверх object layer.
+- [ ] Shape threshold і line/arrow direction.
+- [ ] Multi-touch pointerId protection.
+- [ ] Laser.
 
-## 10. Перед merge
+## 12. Перед merge
 
-- [x] `Validate TeacherBoard Next` зелений після останніх змін.
-- [ ] Один фінальний ручний запуск `Browser Smoke TeacherBoard Next`.
-- [x] `preview.html` не підключає `v2.js`, `v3.js` або `fixes-*`.
-- [ ] Пройти короткий фізичний touch-тест.
-- [ ] Перевірити одну реальну велику legacy-дошку після міграції.
-- [ ] Після ручної перевірки створити окремий commit із заміною `index.html`.
-- [ ] Legacy-файли видалити тільки після перевірки опублікованої нової версії.
+- [ ] Один ручний запуск `Validate TeacherBoard Next` на фінальному head.
+- [ ] Один ручний запуск `Browser Smoke TeacherBoard Next` на фінальному head.
+- [x] `preview.html` не підключає legacy `v2.js`, `v3.js` або `fixes-*`.
+- [ ] Пройти короткий physical desktop/tablet/Android test.
+- [ ] Перевірити одну real legacy board після migration.
+- [ ] Перевірити complex PNG.
+- [ ] Лише після цього окремим commit замінити `index.html`.
+- [ ] Legacy-файли видаляти тільки після перевірки опублікованої нової версії.
