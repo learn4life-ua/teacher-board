@@ -38,3 +38,6 @@ jobs:
 
       - name: Check module paths and preview contract
         run: node tests/static-check.mjs
+
+      - name: Check zoom coordinate contract
+        run: node tests/zoom-check.mjs
