@@ -13,6 +13,7 @@ async function runCase(name, contextOptions = {}) {
 
   await page.goto(baseURL, { waitUntil: 'networkidle' });
   await page.waitForSelector('#scene');
+  const narrow = (contextOptions.viewport?.width || 9999) <= 900 || contextOptions.isMobile;
 
   assert.equal(await page.locator('#shapeMenu').isHidden(), true, `${name}: shape menu must start closed`);
   await page.click('#shapeBtn');
@@ -30,6 +31,11 @@ async function runCase(name, contextOptions = {}) {
   await page.waitForTimeout(100);
   assert.ok(await page.locator('.scene-object').count() >= 1, `${name}: shape object was not created`);
 
+  if (narrow) {
+    await page.click('#mobilePanelBtn');
+    assert.equal(await page.locator('#sidePanel').evaluate(() => document.body.classList.contains('side-panel-open')), true, `${name}: mobile panel did not open`);
+  }
+
   await page.fill('#textValue', 'x² + y² = 25');
   await page.click('#addTextBtn');
   assert.ok(await page.locator('.text-object').count() >= 1, `${name}: text object was not created`);
@@ -37,6 +43,8 @@ async function runCase(name, contextOptions = {}) {
   await page.fill('#graphExpression', 'x^2');
   await page.click('#addGraphBtn');
   assert.ok(await page.locator('.graph-object').count() >= 1, `${name}: graph object was not created`);
+
+  if (narrow) await page.click('#closeSidePanelBtn');
 
   await page.locator('.instrument-btn[data-instrument="ruler"]').click();
   assert.ok(await page.locator('.geometry-tool').count() >= 1, `${name}: ruler was not created`);
@@ -46,12 +54,6 @@ async function runCase(name, contextOptions = {}) {
   assert.equal(await page.locator('.page-tab').count(), beforePages + 1, `${name}: page was not added`);
   await page.click('#duplicatePageBtn');
   assert.equal(await page.locator('.page-tab').count(), beforePages + 2, `${name}: page was not duplicated`);
-
-  if (contextOptions.viewport?.width <= 900 || contextOptions.isMobile) {
-    await page.click('#mobilePanelBtn');
-    assert.equal(await page.locator('#sidePanel').evaluate(() => document.body.classList.contains('side-panel-open')), true, `${name}: mobile panel did not open`);
-    await page.click('#closeSidePanelBtn');
-  }
 
   if (name === 'desktop') {
     const downloadPromise = page.waitForEvent('download', { timeout: 15000 });
