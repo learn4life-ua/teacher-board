@@ -10,7 +10,16 @@ function drawBackground(ctx,bg){
   const lines=(step,color)=>{ctx.beginPath();for(let x=step;x<WIDTH;x+=step){ctx.moveTo(x,0);ctx.lineTo(x,HEIGHT);}for(let y=step;y<HEIGHT;y+=step){ctx.moveTo(0,y);ctx.lineTo(WIDTH,y);}ctx.strokeStyle=color;ctx.lineWidth=1;ctx.stroke();};
   if(bg==='grid') lines(40,'#d9e5e1');
   if(bg==='lines'){ctx.beginPath();for(let y=40;y<HEIGHT;y+=40){ctx.moveTo(0,y);ctx.lineTo(WIDTH,y);}ctx.strokeStyle='#d9e5e1';ctx.lineWidth=1;ctx.stroke();}
-  if(bg==='coords'){lines(20,'#e7efec');lines(100,'#aac5bc');}
+  if(bg==='coords'){
+    lines(20,'#e7efec');
+    lines(100,'#aac5bc');
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(WIDTH/2,0);ctx.lineTo(WIDTH/2,HEIGHT);
+    ctx.moveTo(0,HEIGHT/2);ctx.lineTo(WIDTH,HEIGHT/2);
+    ctx.strokeStyle='#76998e';ctx.lineWidth=2;ctx.stroke();
+    ctx.restore();
+  }
 }
 
 function inlineSvgStyles(source,clone){
