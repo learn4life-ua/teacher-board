@@ -7,7 +7,7 @@ on:
   pull_request:
     paths:
       - 'src/**'
-      - 'css/next.css'
+      - 'css/**'
       - 'preview.html'
       - 'tests/**'
       - '.github/workflows/validate-next.yml'
