@@ -143,6 +143,10 @@ jobs:
           grep -q 'if(this.drag.historyPushed)return true' src/instruments/geometry-tools.js
           grep -q 'ensureDragHistory' src/objects/object-manager.js
           grep -q 'ensureDragHistory' src/instruments/geometry-tools.js
+          grep -q 'function isEditableTarget' src/app.js
+          grep -q "input,textarea,select,\[contenteditable=\"true\"\]" src/app.js
+          grep -q "if(!editing&&(e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z')" src/app.js
+          grep -q "if(!editing&&(e.key==='Delete'||e.key==='Backspace')" src/app.js
           if grep -Eq 'pointerDownObject\([^)]*\).*pushHistory' src/objects/object-manager.js; then
             echo 'Object selection must not create an empty undo snapshot.'
             exit 1
