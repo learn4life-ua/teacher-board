@@ -16,12 +16,17 @@ export function createBlankPage(name = 'Нова сторінка') {
     name,
     background: 'clean',
     strokes: [],
-    objects: []
+    objects: [],
+    instruments: []
   };
 }
 
 export function activePage(state) {
-  return state.pages[state.activePage];
+  const page = state.pages[state.activePage];
+  if (page && !Array.isArray(page.strokes)) page.strokes = [];
+  if (page && !Array.isArray(page.objects)) page.objects = [];
+  if (page && !Array.isArray(page.instruments)) page.instruments = [];
+  return page;
 }
 
 export function uid(prefix = 'o') {
