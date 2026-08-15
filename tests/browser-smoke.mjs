@@ -97,13 +97,17 @@ async function runCase(name, contextOptions = {}) {
     const beforeLaserObjects = await page.locator('.scene-object').count();
     await page.locator('#laserBtn').evaluate(el => el.click());
     assert.equal(await page.locator('#laserBtn').evaluate(el => el.classList.contains('active')), true, `${name}: laser did not activate`);
-    const sceneBox = await page.locator('#scene').boundingBox();
-    assert.ok(sceneBox, `${name}: no scene box for laser`);
-    await page.mouse.move(sceneBox.x + 70, sceneBox.y + 390);
-    await page.mouse.down();
-    await page.mouse.move(sceneBox.x + 130, sceneBox.y + 430);
+    await page.locator('#scene').evaluate(scene => {
+      const rect=scene.getBoundingClientRect();
+      const make=(type,x,y)=>new PointerEvent(type,{bubbles:true,cancelable:true,pointerId:41,pointerType:'mouse',isPrimary:true,buttons:type==='pointerup'?0:1,clientX:rect.left+x,clientY:rect.top+y});
+      scene.dispatchEvent(make('pointerdown',70,390));
+      window.dispatchEvent(make('pointermove',130,430));
+    });
     assert.equal(await page.locator('#laserDot').isVisible(), true, `${name}: laser dot is not visible while pointing`);
-    await page.mouse.up();
+    await page.locator('#scene').evaluate(scene => {
+      const rect=scene.getBoundingClientRect();
+      window.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,cancelable:true,pointerId:41,pointerType:'mouse',isPrimary:true,buttons:0,clientX:rect.left+130,clientY:rect.top+430}));
+    });
     await page.waitForTimeout(260);
     assert.equal(await page.locator('#laserDot').isHidden(), true, `${name}: laser dot did not hide after pointer up`);
     assert.equal(await page.locator('.scene-object').count(), beforeLaserObjects, `${name}: laser must not create board objects`);
