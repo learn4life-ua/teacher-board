@@ -45,6 +45,9 @@ jobs:
       - name: Check page history contract
         run: node tests/history-check.mjs
 
+      - name: Check graph performance guards
+        run: node tests/graph-performance-check.mjs
+
       - name: Check object edit panel contract
         shell: bash
         run: |
