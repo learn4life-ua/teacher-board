@@ -43,7 +43,7 @@ export class ObjectManager {
     return el;
   }
   pointerDownObject(e,obj){if(this.state.tool!=='select'||obj.locked)return;e.preventDefault();e.stopPropagation();this.select(obj.id);const handle=e.target.closest('[data-handle]')?.dataset.handle;pushHistory(this.state);this.drag={mode:handle||'move',id:obj.id,startX:e.clientX,startY:e.clientY,x:obj.x,y:obj.y,w:obj.w,h:obj.h,aspect:obj.w/Math.max(1,obj.h),rotation:obj.rotation||0,center:{x:obj.x+obj.w/2,y:obj.y+obj.h/2}};}
-  bindGlobalPointerEvents(){window.addEventListener('pointermove',e=>this.pointerMove(e));window.addEventListener('pointerup',()=>this.pointerUp());}
+  bindGlobalPointerEvents(){window.addEventListener('pointermove',e=>this.pointerMove(e));window.addEventListener('pointerup',()=>this.pointerUp());window.addEventListener('pointercancel',()=>this.pointerUp());window.addEventListener('blur',()=>this.pointerUp());}
   pointerMove(e){
     if(!this.drag)return;
     const obj=this.objects.find(o=>o.id===this.drag.id);if(!obj||obj.locked)return;
