@@ -51,6 +51,9 @@ jobs:
       - name: Check graph performance guards
         run: node tests/graph-performance-check.mjs
 
+      - name: Check PNG export contract
+        run: node tests/export-contract-check.mjs
+
       - name: Check object edit panel contract
         shell: bash
         run: |
