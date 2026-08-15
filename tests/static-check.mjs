@@ -39,9 +39,10 @@ else {
   const requiredIds = [
     'scene','boardViewport','drawingCanvas','objectLayer','instrumentLayer',
     'shapeMenu','shapeBtn','textBtn','imageBtn','imageInput',
-    'undoBtn','redoBtn','deleteBtn','zoomInBtn','zoomOutBtn','zoomLabel',
+    'undoBtn','redoBtn','deleteBtn','zoomInBtn','zoomOutBtn','zoomLabel','savePngBtn',
+    'duplicatePageBtn','clearPageBtn','fullscreenBtn',
     'pages','addPageBtn','autosaveState','sidePanel','mobilePanelBtn','closeSidePanelBtn','panelScrim',
-    'textValue','addTextBtn','updateTextBtn',
+    'textValue','symbolButtons','addTextBtn','updateTextBtn',
     'graphExpression','graphXMin','graphXMax','graphYMin','graphYMax','graphStep','addGraphBtn','updateGraphBtn'
   ];
   for (const id of requiredIds) {
@@ -51,11 +52,13 @@ else {
   if (!/type=["']module["'][^>]+src=["']src\/app\.js["']/.test(html) && !/src=["']src\/app\.js["'][^>]+type=["']module["']/.test(html)) {
     fail('preview.html: src/app.js має бути підключений як ES module.');
   }
+  if (!/src=["']src\/core\/export-bind\.js["']/.test(html)) fail('preview.html: не підключено PNG export binder.');
   if (/\b(?:v2|v3|fixes-v\d+)\.js\b/.test(html)) fail('preview.html не повинен підключати legacy patch-файли.');
 }
 
 const requiredModules = [
   'src/app.js','src/core/state.js','src/core/storage.js','src/core/history.js','src/core/scene.js',
+  'src/core/export-png.js','src/core/export-bind.js',
   'src/drawing/freehand.js','src/objects/object-manager.js','src/objects/shapes.js','src/objects/text.js',
   'src/objects/images.js','src/math/graph.js','src/instruments/geometry-tools.js'
 ];
