@@ -72,11 +72,12 @@ export class ObjectManager {
     el.querySelector('.object-delete')?.addEventListener('click',e=>{e.stopPropagation();this.deleteSelected();});
     return el;
   }
-  pointerDownObject(e,obj){if(this.state.tool!=='select'||obj.locked)return;e.preventDefault();e.stopPropagation();this.select(obj.id);const handle=e.target.closest('[data-handle]')?.dataset.handle;this.drag={mode:handle||'move',id:obj.id,startX:e.clientX,startY:e.clientY,x:obj.x,y:obj.y,w:obj.w,h:obj.h,aspect:obj.w/Math.max(1,obj.h),rotation:obj.rotation||0,center:{x:obj.x+obj.w/2,y:obj.y+obj.h/2},historyPushed:false};}
-  bindGlobalPointerEvents(){window.addEventListener('pointermove',e=>this.pointerMove(e));window.addEventListener('pointerup',()=>this.pointerUp());window.addEventListener('pointercancel',()=>this.pointerUp());window.addEventListener('blur',()=>this.pointerUp());}
+  pointerDownObject(e,obj){if(this.state.tool!=='select'||obj.locked||this.drag)return;e.preventDefault();e.stopPropagation();this.select(obj.id);const handle=e.target.closest('[data-handle]')?.dataset.handle;this.drag={mode:handle||'move',id:obj.id,pointerId:e.pointerId??null,startX:e.clientX,startY:e.clientY,x:obj.x,y:obj.y,w:obj.w,h:obj.h,aspect:obj.w/Math.max(1,obj.h),rotation:obj.rotation||0,center:{x:obj.x+obj.w/2,y:obj.y+obj.h/2},historyPushed:false};}
+  bindGlobalPointerEvents(){window.addEventListener('pointermove',e=>this.pointerMove(e));window.addEventListener('pointerup',e=>this.pointerUp(e));window.addEventListener('pointercancel',e=>this.pointerUp(e));window.addEventListener('blur',()=>this.pointerUp());}
+  matchesPointer(e){return !this.drag||this.drag.pointerId===null||e?.pointerId===undefined||e.pointerId===this.drag.pointerId;}
   ensureDragHistory(screenDx,screenDy){if(!this.drag)return false;if(this.drag.historyPushed)return true;if(Math.abs(screenDx)<.5&&Math.abs(screenDy)<.5)return false;pushHistory(this.state);this.drag.historyPushed=true;return true;}
   pointerMove(e){
-    if(!this.drag)return;
+    if(!this.drag||!this.matchesPointer(e))return;
     const obj=this.objects.find(o=>o.id===this.drag.id);if(!obj||obj.locked)return;
     const screenDx=e.clientX-this.drag.startX,screenDy=e.clientY-this.drag.startY;
     if(!this.ensureDragHistory(screenDx,screenDy))return;
@@ -93,6 +94,6 @@ export class ObjectManager {
     }
     this.render();
   }
-  pointerUp(){if(!this.drag)return;const changed=this.drag.historyPushed;this.drag=null;if(changed)this.changed();}
+  pointerUp(e){if(!this.drag||!this.matchesPointer(e))return;const changed=this.drag.historyPushed;this.drag=null;if(changed)this.changed();}
   changed(){this.render();this.onChange?.();}
 }
