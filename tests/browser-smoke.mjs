@@ -21,6 +21,81 @@ async function drawShape(page,shape,from,to){
   await page.waitForTimeout(80);
 }
 
+async function runLegacyMigrationCase(){
+  console.log('[migration] start');
+  const browser=await chromium.launch({headless:true});
+  try{
+    const context=await browser.newContext({viewport:{width:1280,height:900}});
+    const page=await context.newPage();
+    page.setDefaultTimeout(8000);
+    const errors=[];
+    page.on('pageerror',e=>errors.push(String(e)));
+    page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+
+    const legacy={
+      activePage:0,
+      pages:[{
+        id:'legacy-page-1',
+        name:'Старий урок',
+        background:'grid',
+        image:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+        texts:[{text:'Старий текст',x:123,y:234,color:'#123456'}]
+      }]
+    };
+
+    await page.addInitScript(data=>{
+      localStorage.removeItem('teacherboard.v2');
+      localStorage.removeItem('teacherboard.v2.migratedFromV1');
+      localStorage.setItem('teacherboard.v1',JSON.stringify(data));
+    },legacy);
+
+    await page.goto(baseURL,{waitUntil:'networkidle'});
+    await page.waitForSelector('#scene');
+
+    const migrated=await page.evaluate(()=>({
+      v1:localStorage.getItem('teacherboard.v1'),
+      flag:localStorage.getItem('teacherboard.v2.migratedFromV1'),
+      v2:JSON.parse(localStorage.getItem('teacherboard.v2')||'null')
+    }));
+
+    assert.equal(migrated.v1,null,'migration: legacy v1 key should be removed after successful migration');
+    assert.equal(migrated.flag,'1','migration: migration flag was not written');
+    assert.equal(migrated.v2?.pages?.length,1,'migration: expected one migrated page');
+    assert.equal(migrated.v2.pages[0].id,'legacy-page-1','migration: page id was not preserved');
+    assert.equal(migrated.v2.pages[0].name,'Старий урок','migration: page name was not preserved');
+    assert.equal(migrated.v2.pages[0].background,'grid','migration: page background was not preserved');
+
+    const objects=migrated.v2.pages[0].objects||[];
+    const raster=objects.find(o=>o.legacyRaster===true);
+    const text=objects.find(o=>o.kind==='text'&&o.text==='Старий текст');
+    assert.ok(raster,'migration: legacy canvas raster was not converted to an image object');
+    assert.equal(raster.kind,'image','migration: legacy raster must be an image object');
+    assert.equal(raster.locked,true,'migration: legacy raster must be locked');
+    assert.equal(raster.x,0,'migration: legacy raster x must be 0');
+    assert.equal(raster.y,0,'migration: legacy raster y must be 0');
+    assert.equal(raster.w,1600,'migration: legacy raster width must cover scene');
+    assert.equal(raster.h,900,'migration: legacy raster height must cover scene');
+    assert.ok(text,'migration: legacy text was not converted to a text object');
+    assert.equal(text.x,123,'migration: legacy text x was not preserved');
+    assert.equal(text.y,234,'migration: legacy text y was not preserved');
+    assert.equal(text.color,'#123456','migration: legacy text color was not preserved');
+
+    assert.equal(await page.locator('.locked-object.image-object').count(),1,'migration: locked legacy image was not rendered');
+    assert.equal(await page.locator('.locked-object.image-object').evaluate(el=>getComputedStyle(el).pointerEvents),'none','migration: locked raster must ignore pointer events');
+    assert.ok((await page.locator('.text-object').allTextContents()).some(value=>value.includes('Старий текст')),'migration: migrated text was not rendered');
+
+    const beforeReload=await page.locator('.scene-object').count();
+    await page.reload({waitUntil:'networkidle'});
+    await page.waitForSelector('#scene');
+    assert.equal(await page.locator('.scene-object').count(),beforeReload,'migration: reload duplicated migrated objects');
+    assert.equal(await page.evaluate(()=>localStorage.getItem('teacherboard.v1')),null,'migration: v1 unexpectedly reappeared after reload');
+    assert.deepEqual(errors,[],`migration: browser errors: ${errors.join(' | ')}`);
+    console.log('[migration] v1 → v2 ok');
+  }finally{
+    await browser.close();
+  }
+}
+
 async function desktopExtras(page){
   const beforeCurtain=await page.locator('.scene-object').count();
   await drawShape(page,'curtain',{x:55,y:80},{x:180,y:165});
@@ -130,6 +205,7 @@ async function runCase(name,contextOptions={}){
   }
 }
 
+await runLegacyMigrationCase();
 await runCase('desktop',{viewport:{width:1440,height:1000}});
 await runCase('tablet',{viewport:{width:820,height:1180},hasTouch:true});
 await runCase('android',{...devices['Pixel 7']});
