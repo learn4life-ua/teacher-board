@@ -6,231 +6,35 @@ import { ObjectManager } from './objects/object-manager.js';
 import { SHAPE_LABELS } from './objects/shapes.js';
 import { FreehandDrawing } from './drawing/freehand.js';
 import { GeometryTools } from './instruments/geometry-tools.js';
+import { fileToDataUrl, readImageSize } from './objects/images.js';
 
-let state = loadState(createState());
+let state=loadState(createState());
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const sceneEl=$('#scene'),viewport=$('#boardViewport'),canvas=$('#drawingCanvas'),objectLayer=$('#objectLayer'),instrumentLayer=$('#instrumentLayer'),zoomLabel=$('#zoomLabel'),pagesEl=$('#pages'),shapeMenu=$('#shapeMenu'),autosaveState=$('#autosaveState');
+const scene=new Scene({viewport,scene:sceneEl,zoomLabel,state});
+const objectManager=new ObjectManager({state,layer:objectLayer,onChange:commit});
+const drawing=new FreehandDrawing({state,canvas,scene,onChange:commit});
+const geometryTools=new GeometryTools({state,layer:instrumentLayer,objectManager,onChange:commit});
+let shapeGesture=null;
 
-const $ = sel => document.querySelector(sel);
-const $$ = sel => [...document.querySelectorAll(sel)];
-const sceneEl = $('#scene');
-const viewport = $('#boardViewport');
-const canvas = $('#drawingCanvas');
-const objectLayer = $('#objectLayer');
-const instrumentLayer = $('#instrumentLayer');
-const zoomLabel = $('#zoomLabel');
-const pagesEl = $('#pages');
-const shapeMenu = $('#shapeMenu');
-const autosaveState = $('#autosaveState');
+function commit(){autosaveState.textContent='Збереження…';saveState(state);autosaveState.textContent='Збережено';renderAll();}
+function setTool(tool){state.tool=tool;if(tool!=='select')state.selection=null;$$('.tool[data-tool]').forEach(b=>b.classList.toggle('active',b.dataset.tool===tool));sceneEl.dataset.tool=tool;objectManager.render();shapeMenu.hidden=true;}
+function renderAll(){scene.applyZoom();sceneEl.dataset.background=activePage(state).background||'clean';drawing.render();objectManager.render();geometryTools.render();renderPages();syncGraphPanel();syncTextPanel();$$('.background-btn').forEach(b=>b.classList.toggle('selected',b.dataset.bg===activePage(state).background));}
+function renderPages(){pagesEl.innerHTML='';state.pages.forEach((page,i)=>{const b=document.createElement('button');b.className=`page-tab${i===state.activePage?' active':''}`;b.textContent=`${i+1}. ${page.name}`;b.addEventListener('click',()=>{state.activePage=i;state.selection=null;resetHistory(state);commit();});pagesEl.appendChild(b);});}
+function addPage(){state.pages.push(createBlankPage(`Сторінка ${state.pages.length+1}`));state.activePage=state.pages.length-1;state.selection=null;resetHistory(state);commit();}
+function buildShapeMenu(){shapeMenu.innerHTML=Object.entries(SHAPE_LABELS).map(([key,label])=>`<button type="button" data-shape="${key}">${label}</button>`).join('');shapeMenu.addEventListener('click',e=>{const b=e.target.closest('[data-shape]');if(!b)return;state.tool=`shape:${b.dataset.shape}`;$$('.tool').forEach(x=>x.classList.remove('active'));$('#shapeBtn').classList.add('active');sceneEl.dataset.tool='shape';shapeMenu.hidden=true;});}
+function bindShapeDrawing(){sceneEl.addEventListener('pointerdown',e=>{if(!state.tool.startsWith('shape:')||e.target.closest('.scene-object,.geometry-tool'))return;e.preventDefault();const p=scene.pointFromEvent(e);shapeGesture={start:p,end:p};updateShapePreview();});sceneEl.addEventListener('pointermove',e=>{if(!shapeGesture)return;shapeGesture.end=scene.pointFromEvent(e);updateShapePreview();});window.addEventListener('pointerup',()=>{if(!shapeGesture)return;const{start,end}=shapeGesture,type=state.tool.split(':')[1],x=Math.min(start.x,end.x),y=Math.min(start.y,end.y),w=Math.abs(end.x-start.x),h=Math.abs(end.y-start.y);$('#shapePreview').hidden=true;shapeGesture=null;const obj=objectManager.addShape(type,{x,y,w,h});setTool('select');objectManager.select(obj.id);});}
+function updateShapePreview(){const p=$('#shapePreview'),{start,end}=shapeGesture;p.hidden=false;p.style.left=`${Math.min(start.x,end.x)}px`;p.style.top=`${Math.min(start.y,end.y)}px`;p.style.width=`${Math.abs(end.x-start.x)}px`;p.style.height=`${Math.abs(end.y-start.y)}px`;}
 
-const scene = new Scene({ viewport, scene: sceneEl, zoomLabel, state });
-const objectManager = new ObjectManager({ state, layer: objectLayer, onChange: commit });
-const drawing = new FreehandDrawing({ state, canvas, scene, onChange: commit });
-const geometryTools = new GeometryTools({ state, layer: instrumentLayer, objectManager, onChange: commit });
+function graphValues(){const xMin=Number($('#graphXMin').value),xMax=Number($('#graphXMax').value),yMin=Number($('#graphYMin').value),yMax=Number($('#graphYMax').value),majorStep=Number($('#graphStep').value);if(!(xMin<xMax)||!(yMin<yMax)||!(majorStep>0))return null;return{expression:$('#graphExpression').value.trim()||'x',xMin,xMax,yMin,yMax,majorStep};}
+function syncGraphPanel(){const obj=objectManager.selected(),isGraph=obj?.kind==='graph';$('#updateGraphBtn').disabled=!isGraph;if(!isGraph||document.activeElement?.closest?.('.graph-panel'))return;$('#graphExpression').value=obj.expression||'x';$('#graphXMin').value=obj.xMin;$('#graphXMax').value=obj.xMax;$('#graphYMin').value=obj.yMin;$('#graphYMax').value=obj.yMax;$('#graphStep').value=obj.majorStep||1;}
+function bindGraphPanel(){$('#addGraphBtn').addEventListener('click',()=>{const values=graphValues();if(!values)return alert('Перевірте межі осей і крок шкали.');const graph=objectManager.addGraph(values.expression);Object.assign(graph,values);setTool('select');objectManager.select(graph.id);commit();});$('#updateGraphBtn').addEventListener('click',()=>{const obj=objectManager.selected(),values=graphValues();if(!obj||obj.kind!=='graph'||!values)return;objectManager.updateSelected(values);});}
+function syncTextPanel(){const obj=objectManager.selected(),isText=obj?.kind==='text';$('#updateTextBtn').disabled=!isText;if(isText&&!document.activeElement?.closest?.('.text-panel'))$('#textValue').value=obj.text||'';}
+function bindTextPanel(){$('#textBtn').addEventListener('click',()=>$('#textValue').focus());$('#addTextBtn').addEventListener('click',()=>{const value=$('#textValue').value.trim();if(!value)return;const obj=objectManager.addText(value);setTool('select');objectManager.select(obj.id);});$('#updateTextBtn').addEventListener('click',()=>{const obj=objectManager.selected();if(obj?.kind==='text')objectManager.updateSelected({text:$('#textValue').value});});}
 
-let shapeGesture = null;
+async function insertImageFile(file){if(!file?.type?.startsWith('image/'))return;try{const src=await fileToDataUrl(file),size=await readImageSize(src),obj=objectManager.addImage(src,size.width,size.height);setTool('select');objectManager.select(obj.id);}catch(err){console.error(err);alert('Не вдалося вставити зображення.');}}
+function bindImages(){$('#imageBtn').addEventListener('click',()=>$('#imageInput').click());$('#imageInput').addEventListener('change',e=>{const file=e.target.files?.[0];if(file)insertImageFile(file);e.target.value='';});window.addEventListener('paste',e=>{const file=[...(e.clipboardData?.files||[])].find(f=>f.type.startsWith('image/'));if(file){e.preventDefault();insertImageFile(file);}});}
 
-function commit() {
-  autosaveState.textContent = 'Збереження…';
-  saveState(state);
-  autosaveState.textContent = 'Збережено';
-  renderAll();
-}
+function bindUi(){$$('.tool[data-tool]').forEach(b=>b.addEventListener('click',()=>setTool(b.dataset.tool)));$$('.instrument-btn').forEach(b=>b.addEventListener('click',()=>{geometryTools.add(b.dataset.instrument);setTool('select');}));$('#shapeBtn').addEventListener('click',e=>{e.stopPropagation();shapeMenu.hidden=!shapeMenu.hidden;});document.addEventListener('click',e=>{if(!e.target.closest('#shapeMenu')&&!e.target.closest('#shapeBtn'))shapeMenu.hidden=true;});$('#colorPicker').addEventListener('input',e=>{state.color=e.target.value;const selected=objectManager.selected();if(selected&&!['image'].includes(selected.kind))objectManager.updateSelected({color:state.color});else saveState(state);});$('#lineWidth').addEventListener('change',e=>{state.lineWidth=Number(e.target.value);const selected=objectManager.selected();if(selected&&!['graph','text','image'].includes(selected.kind))objectManager.updateSelected({lineWidth:state.lineWidth});else saveState(state);});$('#zoomInBtn').addEventListener('click',()=>{scene.setZoom(state.zoom+.1);saveState(state);geometryTools.render();});$('#zoomOutBtn').addEventListener('click',()=>{scene.setZoom(state.zoom-.1);saveState(state);geometryTools.render();});$('#undoBtn').addEventListener('click',()=>{if(undo(state))commit();});$('#redoBtn').addEventListener('click',()=>{if(redo(state))commit();});$('#deleteBtn').addEventListener('click',()=>objectManager.deleteSelected());$('#addPageBtn').addEventListener('click',addPage);$$('.background-btn').forEach(b=>b.addEventListener('click',()=>{activePage(state).background=b.dataset.bg;commit();}));sceneEl.addEventListener('pointerdown',e=>{if(state.tool==='select'&&!e.target.closest('.scene-object,.geometry-tool'))objectManager.select(null);});window.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();if(e.shiftKey?redo(state):undo(state))commit();}if((e.key==='Delete'||e.key==='Backspace')&&state.selection&&!e.target.closest('input,textarea')){e.preventDefault();objectManager.deleteSelected();}if(e.key==='Escape')setTool('select');});}
 
-function setTool(tool) {
-  state.tool = tool;
-  if (tool !== 'select') state.selection = null;
-  $$('.tool[data-tool]').forEach(b => b.classList.toggle('active', b.dataset.tool === tool));
-  sceneEl.dataset.tool = tool;
-  objectManager.render();
-  shapeMenu.hidden = true;
-}
-
-function renderAll() {
-  scene.applyZoom();
-  sceneEl.dataset.background = activePage(state).background || 'clean';
-  drawing.render();
-  objectManager.render();
-  geometryTools.render();
-  renderPages();
-  syncGraphPanel();
-  syncTextPanel();
-  $$('.background-btn').forEach(b => b.classList.toggle('selected', b.dataset.bg === activePage(state).background));
-}
-
-function renderPages() {
-  pagesEl.innerHTML = '';
-  state.pages.forEach((page, i) => {
-    const b = document.createElement('button');
-    b.className = `page-tab${i === state.activePage ? ' active' : ''}`;
-    b.textContent = `${i + 1}. ${page.name}`;
-    b.addEventListener('click', () => {
-      state.activePage = i;
-      state.selection = null;
-      resetHistory(state);
-      commit();
-    });
-    pagesEl.appendChild(b);
-  });
-}
-
-function addPage() {
-  state.pages.push(createBlankPage(`Сторінка ${state.pages.length + 1}`));
-  state.activePage = state.pages.length - 1;
-  state.selection = null;
-  resetHistory(state);
-  commit();
-}
-
-function buildShapeMenu() {
-  shapeMenu.innerHTML = Object.entries(SHAPE_LABELS).map(([key, label]) => `<button type="button" data-shape="${key}">${label}</button>`).join('');
-  shapeMenu.addEventListener('click', e => {
-    const b = e.target.closest('[data-shape]');
-    if (!b) return;
-    state.tool = `shape:${b.dataset.shape}`;
-    $$('.tool').forEach(x => x.classList.remove('active'));
-    $('#shapeBtn').classList.add('active');
-    sceneEl.dataset.tool = 'shape';
-    shapeMenu.hidden = true;
-  });
-}
-
-function bindShapeDrawing() {
-  sceneEl.addEventListener('pointerdown', e => {
-    if (!state.tool.startsWith('shape:')) return;
-    if (e.target.closest('.scene-object,.geometry-tool')) return;
-    e.preventDefault();
-    const p = scene.pointFromEvent(e);
-    shapeGesture = { start: p, end: p };
-    updateShapePreview();
-  });
-  sceneEl.addEventListener('pointermove', e => {
-    if (!shapeGesture) return;
-    shapeGesture.end = scene.pointFromEvent(e);
-    updateShapePreview();
-  });
-  window.addEventListener('pointerup', () => {
-    if (!shapeGesture) return;
-    const { start, end } = shapeGesture;
-    const type = state.tool.split(':')[1];
-    const x = Math.min(start.x, end.x), y = Math.min(start.y, end.y);
-    const w = Math.abs(end.x - start.x), h = Math.abs(end.y - start.y);
-    $('#shapePreview').hidden = true;
-    shapeGesture = null;
-    const obj = objectManager.addShape(type, { x, y, w, h });
-    setTool('select');
-    objectManager.select(obj.id);
-  });
-}
-
-function updateShapePreview() {
-  const p = $('#shapePreview');
-  const { start, end } = shapeGesture;
-  p.hidden = false;
-  p.style.left = `${Math.min(start.x, end.x)}px`;
-  p.style.top = `${Math.min(start.y, end.y)}px`;
-  p.style.width = `${Math.abs(end.x - start.x)}px`;
-  p.style.height = `${Math.abs(end.y - start.y)}px`;
-}
-
-function graphValues() {
-  const xMin = Number($('#graphXMin').value), xMax = Number($('#graphXMax').value);
-  const yMin = Number($('#graphYMin').value), yMax = Number($('#graphYMax').value);
-  const majorStep = Number($('#graphStep').value);
-  if (!(xMin < xMax) || !(yMin < yMax) || !(majorStep > 0)) return null;
-  return { expression: $('#graphExpression').value.trim() || 'x', xMin, xMax, yMin, yMax, majorStep };
-}
-
-function syncGraphPanel() {
-  const obj = objectManager.selected();
-  const isGraph = obj?.kind === 'graph';
-  $('#updateGraphBtn').disabled = !isGraph;
-  if (!isGraph || document.activeElement?.closest?.('.graph-panel')) return;
-  $('#graphExpression').value = obj.expression || 'x';
-  $('#graphXMin').value = obj.xMin;
-  $('#graphXMax').value = obj.xMax;
-  $('#graphYMin').value = obj.yMin;
-  $('#graphYMax').value = obj.yMax;
-  $('#graphStep').value = obj.majorStep || 1;
-}
-
-function bindGraphPanel() {
-  $('#addGraphBtn').addEventListener('click', () => {
-    const values = graphValues();
-    if (!values) return alert('Перевірте межі осей і крок шкали.');
-    const graph = objectManager.addGraph(values.expression);
-    Object.assign(graph, values);
-    setTool('select');
-    objectManager.select(graph.id);
-    commit();
-  });
-  $('#updateGraphBtn').addEventListener('click', () => {
-    const obj = objectManager.selected();
-    const values = graphValues();
-    if (!obj || obj.kind !== 'graph' || !values) return;
-    objectManager.updateSelected(values);
-  });
-}
-
-function syncTextPanel() {
-  const obj = objectManager.selected();
-  const isText = obj?.kind === 'text';
-  $('#updateTextBtn').disabled = !isText;
-  if (isText && !document.activeElement?.closest?.('.text-panel')) $('#textValue').value = obj.text || '';
-}
-
-function bindTextPanel() {
-  $('#textBtn').addEventListener('click', () => $('#textValue').focus());
-  $('#addTextBtn').addEventListener('click', () => {
-    const value = $('#textValue').value.trim();
-    if (!value) return;
-    const obj = objectManager.addText(value);
-    setTool('select');
-    objectManager.select(obj.id);
-  });
-  $('#updateTextBtn').addEventListener('click', () => {
-    const obj = objectManager.selected();
-    if (!obj || obj.kind !== 'text') return;
-    objectManager.updateSelected({ text: $('#textValue').value });
-  });
-}
-
-function bindUi() {
-  $$('.tool[data-tool]').forEach(b => b.addEventListener('click', () => setTool(b.dataset.tool)));
-  $$('.instrument-btn').forEach(b => b.addEventListener('click', () => { geometryTools.add(b.dataset.instrument); setTool('select'); }));
-  $('#shapeBtn').addEventListener('click', e => { e.stopPropagation(); shapeMenu.hidden = !shapeMenu.hidden; });
-  document.addEventListener('click', e => {
-    if (!e.target.closest('#shapeMenu') && !e.target.closest('#shapeBtn')) shapeMenu.hidden = true;
-  });
-  $('#colorPicker').addEventListener('input', e => {
-    state.color = e.target.value;
-    const selected = objectManager.selected();
-    if (selected) objectManager.updateSelected({ color: state.color }); else saveState(state);
-  });
-  $('#lineWidth').addEventListener('change', e => {
-    state.lineWidth = Number(e.target.value);
-    const selected = objectManager.selected();
-    if (selected && !['graph','text'].includes(selected.kind)) objectManager.updateSelected({ lineWidth: state.lineWidth }); else saveState(state);
-  });
-  $('#zoomInBtn').addEventListener('click', () => { scene.setZoom(state.zoom + .1); saveState(state); geometryTools.render(); });
-  $('#zoomOutBtn').addEventListener('click', () => { scene.setZoom(state.zoom - .1); saveState(state); geometryTools.render(); });
-  $('#undoBtn').addEventListener('click', () => { if (undo(state)) commit(); });
-  $('#redoBtn').addEventListener('click', () => { if (redo(state)) commit(); });
-  $('#deleteBtn').addEventListener('click', () => objectManager.deleteSelected());
-  $('#addPageBtn').addEventListener('click', addPage);
-  $$('.background-btn').forEach(b => b.addEventListener('click', () => { activePage(state).background = b.dataset.bg; commit(); }));
-  sceneEl.addEventListener('pointerdown', e => {
-    if (state.tool === 'select' && !e.target.closest('.scene-object,.geometry-tool')) objectManager.select(null);
-  });
-  window.addEventListener('keydown', e => {
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); if (e.shiftKey ? redo(state) : undo(state)) commit(); }
-    if ((e.key === 'Delete' || e.key === 'Backspace') && state.selection && !e.target.closest('input,textarea')) { e.preventDefault(); objectManager.deleteSelected(); }
-    if (e.key === 'Escape') setTool('select');
-  });
-}
-
-buildShapeMenu();
-bindShapeDrawing();
-bindGraphPanel();
-bindTextPanel();
-bindUi();
-setTool(state.tool.startsWith('shape:') ? 'select' : state.tool);
-renderAll();
+buildShapeMenu();bindShapeDrawing();bindGraphPanel();bindTextPanel();bindImages();bindUi();setTool(state.tool.startsWith('shape:')?'select':state.tool);renderAll();
