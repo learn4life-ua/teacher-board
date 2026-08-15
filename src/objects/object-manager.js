@@ -28,14 +28,14 @@ function aspectBox({width,height,ratio,minW,minH,maxW=MAX_OBJECT_W,maxH=MAX_OBJE
 export function resizeObjectDimensions({kind,shape,startW,startH,dx,dy,rotation=0,aspect=startW/Math.max(1,startH)}){
   const local=sceneDeltaToLocalAxes(dx,dy,rotation),rdx=local.x,rdy=local.y;
   const directed=kind==='shape'&&['segment','arrow'].includes(shape);
-  const circle=kind==='shape'&&shape==='circle';
+  const roundShape=kind==='shape'&&['circle','circleArc'].includes(shape);
   const minW=kind==='graph'?320:kind==='text'?120:kind==='image'?80:directed?8:40;
-  const minH=kind==='graph'?240:kind==='text'?50:kind==='image'?60:directed?20:circle?40:20;
+  const minH=kind==='graph'?240:kind==='text'?50:kind==='image'?60:directed?20:roundShape?40:20;
   if(directed)return {w:clamp(startW+rdx,minW,MAX_OBJECT_W),h:clamp(startH,minH,120),local};
   let w=clamp(startW+rdx,minW,MAX_OBJECT_W),h=clamp(startH+rdy,minH,MAX_OBJECT_H);
-  if(kind==='image'||circle){
-    const ratio=circle?1:Math.max(.05,Number(aspect)||1);
-    const constrained=aspectBox({width:w,height:h,ratio,minW,minH,maxW:circle?MAX_OBJECT_H:MAX_OBJECT_W,maxH:MAX_OBJECT_H,preferWidth:Math.abs(rdx)>=Math.abs(rdy)});
+  if(kind==='image'||roundShape){
+    const ratio=roundShape?1:Math.max(.05,Number(aspect)||1);
+    const constrained=aspectBox({width:w,height:h,ratio,minW,minH,maxW:roundShape?MAX_OBJECT_H:MAX_OBJECT_W,maxH:MAX_OBJECT_H,preferWidth:Math.abs(rdx)>=Math.abs(rdy)});
     w=constrained.w;h=constrained.h;
   }
   return {w,h,local};
