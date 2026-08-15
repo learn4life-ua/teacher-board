@@ -37,8 +37,8 @@ if (!exists('preview.html')) fail('Відсутній preview.html.');
 else {
   const html = read('preview.html');
   const requiredIds = [
-    'scene','boardViewport','drawingCanvas','objectLayer','instrumentLayer',
-    'shapeMenu','shapeBtn','textBtn','imageBtn','imageInput',
+    'scene','boardViewport','drawingCanvas','objectLayer','instrumentLayer','laserDot',
+    'shapeMenu','shapeBtn','textBtn','imageBtn','imageInput','laserBtn',
     'undoBtn','redoBtn','deleteBtn','zoomInBtn','zoomOutBtn','zoomLabel','savePngBtn',
     'duplicatePageBtn','clearPageBtn','fullscreenBtn',
     'pages','addPageBtn','autosaveState','sidePanel','mobilePanelBtn','closeSidePanelBtn','panelScrim',
@@ -53,12 +53,16 @@ else {
     fail('preview.html: src/app.js має бути підключений як ES module.');
   }
   if (!/src=["']src\/core\/export-bind\.js["']/.test(html)) fail('preview.html: не підключено PNG export binder.');
+  if (!/src=["']src\/tools\/laser\.js["']/.test(html)) fail('preview.html: не підключено laser module.');
   if (/\b(?:v2|v3|fixes-v\d+)\.js\b/.test(html)) fail('preview.html не повинен підключати legacy patch-файли.');
 }
 
+const shapes=exists('src/objects/shapes.js')?read('src/objects/shapes.js'):'';
+if(!/curtain\s*:\s*['"]Шторка['"]/.test(shapes)) fail('У shape registry відсутня редагована Шторка.');
+
 const requiredModules = [
   'src/app.js','src/core/state.js','src/core/storage.js','src/core/history.js','src/core/scene.js',
-  'src/core/export-png.js','src/core/export-bind.js',
+  'src/core/export-png.js','src/core/export-bind.js','src/tools/laser.js',
   'src/drawing/freehand.js','src/objects/object-manager.js','src/objects/shapes.js','src/objects/text.js',
   'src/objects/images.js','src/math/graph.js','src/instruments/geometry-tools.js'
 ];
