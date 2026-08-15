@@ -37,6 +37,16 @@ async function runCase(name, contextOptions = {}) {
   if (narrow) {
     await page.click('#mobilePanelBtn');
     assert.equal(await page.locator('#sidePanel').evaluate(() => document.body.classList.contains('side-panel-open')), true, `${name}: mobile panel did not open`);
+    await page.waitForTimeout(250);
+    const debug=await page.evaluate(()=>{
+      const panel=document.querySelector('#sidePanel');
+      const button=document.querySelector('#addTextBtn');
+      const pr=panel.getBoundingClientRect(),br=button.getBoundingClientRect();
+      const hit=document.elementFromPoint(br.left+br.width/2,br.top+br.height/2);
+      const pcs=getComputedStyle(panel);
+      return {innerWidth,innerHeight,media:matchMedia('(max-width: 900px)').matches,bodyClass:document.body.className,panelParent:panel.parentElement?.tagName,panelRect:{x:pr.x,y:pr.y,w:pr.width,h:pr.height},buttonRect:{x:br.x,y:br.y,w:br.width,h:br.height},panelZ:pcs.zIndex,panelPosition:pcs.position,panelTransform:pcs.transform,panelVisibility:pcs.visibility,panelPointer:pcs.pointerEvents,hit:hit?`${hit.tagName}#${hit.id}.${hit.className}`:null};
+    });
+    console.log(`[${name}] drawer debug ${JSON.stringify(debug)}`);
   }
 
   await page.fill('#textValue', 'x² + y² = 25');
