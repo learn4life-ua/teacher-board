@@ -7,6 +7,11 @@ const OBJECT_KINDS = new Set(['shape','graph','text','image']);
 const SHAPE_TYPES = new Set(['segment','line','arrow','rect','ellipse','triangle','rightTriangle','parallelogram','trapezoid','rhombus','angle','arc','circleArc','axes','numberLine','xyTable','curtain']);
 const INSTRUMENT_TYPES = new Set(['ruler','protractor','compass']);
 const TOOLS = new Set(['select','pen','marker','eraser']);
+const LEGACY_NUMBER_LINES = {
+  number5: { numberMin: -5, numberMax: 5, showLabels: true },
+  number10: { numberMin: -10, numberMax: 10, showLabels: true },
+  numberBlank: { numberMin: -5, numberMax: 5, showLabels: false }
+};
 
 function id(prefix = 'm') {
   return crypto.randomUUID?.() || `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
@@ -14,6 +19,23 @@ function id(prefix = 'm') {
 
 const finite=(value,fallback=0)=>Number.isFinite(Number(value))?Number(value):fallback;
 const clamp=(value,min,max,fallback=min)=>Math.max(min,Math.min(max,finite(value,fallback)));
+
+function normalizeNumberLine(copy){
+  const alias=LEGACY_NUMBER_LINES[copy.shape];
+  if(alias){
+    copy.shape='numberLine';
+    copy.numberMin=alias.numberMin;
+    copy.numberMax=alias.numberMax;
+    copy.showLabels=alias.showLabels;
+  }
+  if(copy.shape!=='numberLine')return;
+  let min=finite(copy.numberMin,-5),max=finite(copy.numberMax,5);
+  if(!(min<max)){min=-5;max=5;}
+  if(max-min>40)max=min+40;
+  copy.numberMin=min;
+  copy.numberMax=max;
+  copy.showLabels=copy.showLabels!==false;
+}
 
 function normalizeObject(obj) {
   if (!obj || typeof obj !== 'object' || !OBJECT_KINDS.has(obj.kind)) return null;
@@ -26,6 +48,7 @@ function normalizeObject(obj) {
   copy.rotation = finite(copy.rotation, 0);
 
   if (copy.kind === 'shape') {
+    normalizeNumberLine(copy);
     if (!SHAPE_TYPES.has(copy.shape)) return null;
     copy.color = typeof copy.color === 'string' ? copy.color : '#245d55';
     copy.lineWidth = clamp(copy.lineWidth,1,40,4);
@@ -182,8 +205,6 @@ function migrateLegacy(fallback) {
 
     const nextRaw = serializedState(migrated);
 
-    // Large v1 boards contain PNG snapshots. Avoid temporarily storing both copies,
-    // but restore v1 immediately if writing v2 fails for any reason.
     localStorage.removeItem(LEGACY_KEY);
     try {
       localStorage.setItem(STORAGE_KEY, nextRaw);
