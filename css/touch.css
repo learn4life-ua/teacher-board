@@ -1,0 +1,15 @@
+.scene-object:not(.locked-object),
+.scene-object:not(.locked-object) .object-handle,
+.scene-object:not(.locked-object) .object-delete,
+.geometry-tool,
+.geometry-tool button,
+.geometry-tool [data-handle]{
+  touch-action:none;
+  -webkit-user-select:none;
+  user-select:none;
+}
+
+.scene-object:not(.locked-object),
+.geometry-tool{
+  -webkit-tap-highlight-color:transparent;
+}
