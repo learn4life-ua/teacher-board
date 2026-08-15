@@ -14,29 +14,19 @@ function cleanClone(layer){
   return clone;
 }
 
-function loadImage(src){
-  return new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=reject;img.src=src;});
-}
+function loadImage(src){return new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=reject;img.src=src;});}
+function safeName(value){return String(value||'teacherboard').replace(/[\\/:*?"<>|]+/g,'-').trim()||'teacherboard';}
 
-export async function exportScenePng({state,scene,canvas,objectLayer,instrumentLayer,fileName}){
-  const objects=cleanClone(objectLayer);
-  const instruments=cleanClone(instrumentLayer);
-  const drawing=canvas.toDataURL('image/png');
+export async function exportScenePng({scene,canvas,objectLayer,instrumentLayer,fileName}){
+  const objects=cleanClone(objectLayer), instruments=cleanClone(instrumentLayer), drawing=canvas.toDataURL('image/png');
   const css=[...document.styleSheets].map(sheet=>{try{return [...sheet.cssRules].map(r=>r.cssText).join('\n');}catch{return '';}}).join('\n');
-  const bg=state.pages[state.activePage]?.background||'clean';
-  const html=`<div xmlns="http://www.w3.org/1999/xhtml" style="position:relative;width:${WIDTH}px;height:${HEIGHT}px;overflow:hidden;${backgroundCss(bg)}">
-    <style>${css}</style>
-    <img src="${drawing}" style="position:absolute;inset:0;width:${WIDTH}px;height:${HEIGHT}px" />
-    ${objects.outerHTML}
-    ${instruments.outerHTML}
-  </div>`;
+  const bg=scene.dataset.background||'clean';
+  const html=`<div xmlns="http://www.w3.org/1999/xhtml" style="position:relative;width:${WIDTH}px;height:${HEIGHT}px;overflow:hidden;${backgroundCss(bg)}"><style>${css}</style><img src="${drawing}" style="position:absolute;inset:0;width:${WIDTH}px;height:${HEIGHT}px"/>${objects.outerHTML}${instruments.outerHTML}</div>`;
   const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}"><foreignObject width="100%" height="100%">${html}</foreignObject></svg>`;
-  const blob=new Blob([svg],{type:'image/svg+xml;charset=utf-8'});
-  const url=URL.createObjectURL(blob);
+  const url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml;charset=utf-8'}));
   try{
-    const img=await loadImage(url);
-    const out=document.createElement('canvas');out.width=WIDTH;out.height=HEIGHT;
+    const img=await loadImage(url), out=document.createElement('canvas');out.width=WIDTH;out.height=HEIGHT;
     const ctx=out.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,WIDTH,HEIGHT);ctx.drawImage(img,0,0);
-    const a=document.createElement('a');a.download=fileName||`teacherboard-${new Date().toISOString().slice(0,10)}.png`;a.href=out.toDataURL('image/png');a.click();
-  } finally { URL.revokeObjectURL(url); }
+    const a=document.createElement('a');a.download=`${safeName(fileName)}.png`;a.href=out.toDataURL('image/png');document.body.appendChild(a);a.click();a.remove();
+  } finally {URL.revokeObjectURL(url);}
 }
