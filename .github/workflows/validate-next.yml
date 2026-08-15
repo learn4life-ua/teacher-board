@@ -1,16 +1,7 @@
 name: Validate TeacherBoard Next
 
 on:
-  push:
-    branches:
-      - agent/reorganize-teacher-board
-  pull_request:
-    paths:
-      - 'src/**'
-      - 'css/**'
-      - 'preview.html'
-      - 'tests/**'
-      - '.github/workflows/validate-next.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read
