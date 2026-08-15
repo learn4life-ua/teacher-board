@@ -25,6 +25,7 @@
         <button class="tool" data-tool="marker"><span>▰</span><em>Маркер</em></button>
         <button class="tool" data-tool="eraser"><span>⌫</span><em>Гумка</em></button>
         <button class="tool" id="shapeBtn"><span>◇</span><em>Фігури</em></button>
+        <button class="tool" id="textBtn"><span>T</span><em>Текст</em></button>
         <hr>
         <button class="tool instrument-btn" data-instrument="ruler"><span>▰</span><em>Лінійка</em></button>
         <button class="tool instrument-btn" data-instrument="protractor"><span>◒</span><em>Транспортир</em></button>
@@ -55,6 +56,13 @@
           <button class="background-btn" data-bg="coords">Координатна</button>
         </div>
 
+        <section class="text-panel">
+          <h2>Текст</h2>
+          <textarea id="textValue" rows="3" placeholder="Підпис, формула або пояснення"></textarea>
+          <button id="addTextBtn" type="button">＋ Додати текст</button>
+          <button id="updateTextBtn" type="button">Оновити вибраний</button>
+        </section>
+
         <section class="graph-panel">
           <h2>Графік функції</h2>
           <label>y = <input id="graphExpression" value="x^2" autocomplete="off"></label>
@@ -71,7 +79,7 @@
         </section>
 
         <p><strong>Геометрія:</strong> лінійку можна перемістити й повернути, а кнопка «Провести» створює редагований відрізок уздовж її краю. На транспортирі рухається мітка 0–180°; кнопка будує дві сторони вибраного кута. Циркуль створює редаговане коло.</p>
-        <p><strong>Математичні об'єкти:</strong> координатні осі, числова пряма та графік залишаються окремими об'єктами, тому їх можна масштабувати, рухати, повертати й видаляти.</p>
+        <p><strong>Об'єкти:</strong> фігури, текст, координатні осі, числова пряма та графіки залишаються окремими елементами, які можна рухати, масштабувати, повертати й видаляти.</p>
       </aside>
     </main>
 
