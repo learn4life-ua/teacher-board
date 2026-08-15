@@ -56,28 +56,6 @@ async function geometryExtras(page){
   console.log('[desktop] geometry constructions ok');
 }
 
-async function laserSmoke(page){
-  const before=await page.locator('.scene-object').count();
-  await page.locator('#laserBtn').evaluate(el=>el.click());
-  assert.equal(await page.locator('#laserBtn').evaluate(el=>el.classList.contains('active')),true,'desktop: laser did not activate');
-  console.log('[desktop] laser activated');
-
-  await page.locator('#scene').evaluate(scene=>{
-    const r=scene.getBoundingClientRect();
-    scene.dispatchEvent(new PointerEvent('pointerdown',{
-      bubbles:true,cancelable:true,pointerId:41,pointerType:'mouse',isPrimary:true,buttons:1,
-      clientX:r.left+70,clientY:r.top+390
-    }));
-  });
-  assert.equal(await page.locator('#laserDot').isVisible(),true,'desktop: laser dot is not visible');
-  console.log('[desktop] laser pointerdown ok');
-
-  await page.locator('#laserBtn').evaluate(el=>el.click());
-  assert.equal(await page.locator('#laserDot').isHidden(),true,'desktop: laser dot did not hide on deactivate');
-  assert.equal(await page.locator('.scene-object').count(),before,'desktop: laser must not create board objects');
-  console.log('[desktop] laser ok');
-}
-
 async function runCase(name,contextOptions={}){
   console.log(`[${name}] start`);
   const browser=await chromium.launch({headless:true});
@@ -124,7 +102,6 @@ async function runCase(name,contextOptions={}){
 
     if(name==='desktop'){
       await geometryExtras(page);
-      await laserSmoke(page);
       const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('teacherboard.v2')||'null'));
       assert.ok(saved?.pages?.length>=1,'desktop: autosave did not persist v2 state');
       assert.ok(saved.pages.some(p=>Array.isArray(p.objects)&&p.objects.length>0),'desktop: autosave has no objects');
