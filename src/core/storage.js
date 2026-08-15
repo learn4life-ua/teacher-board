@@ -4,6 +4,7 @@ const MIGRATION_FLAG = 'teacherboard.v2.migratedFromV1';
 const BACKGROUNDS = new Set(['clean','grid','lines','coords']);
 const STROKE_TOOLS = new Set(['pen','marker','eraser']);
 const OBJECT_KINDS = new Set(['shape','graph','text','image']);
+const SHAPE_TYPES = new Set(['segment','line','arrow','rect','ellipse','triangle','rightTriangle','parallelogram','trapezoid','rhombus','angle','arc','circleArc','axes','numberLine','xyTable','curtain']);
 const INSTRUMENT_TYPES = new Set(['ruler','protractor','compass']);
 const TOOLS = new Set(['select','pen','marker','eraser']);
 
@@ -25,7 +26,7 @@ function normalizeObject(obj) {
   copy.rotation = finite(copy.rotation, 0);
 
   if (copy.kind === 'shape') {
-    if (typeof copy.shape !== 'string' || !copy.shape) return null;
+    if (!SHAPE_TYPES.has(copy.shape)) return null;
     copy.color = typeof copy.color === 'string' ? copy.color : '#245d55';
     copy.lineWidth = clamp(copy.lineWidth,1,40,4);
   } else if (copy.kind === 'graph') {
@@ -41,7 +42,7 @@ function normalizeObject(obj) {
     copy.color = typeof copy.color === 'string' ? copy.color : '#245d55';
     copy.fontSize = clamp(copy.fontSize,12,160,32);
   } else if (copy.kind === 'image') {
-    if (typeof copy.src !== 'string' || !copy.src) return null;
+    if (typeof copy.src !== 'string' || !copy.src.startsWith('data:image/')) return null;
     copy.locked = Boolean(copy.locked || copy.legacyRaster);
     copy.legacyRaster = Boolean(copy.legacyRaster);
   }
