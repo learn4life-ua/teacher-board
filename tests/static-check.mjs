@@ -3,6 +3,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { graphSvg, evaluateExpression } from '../src/math/graph.js';
 import { shapeSvg } from '../src/objects/shapes.js';
+import { sceneDeltaToLocal, protractorAngleFromPointer, compassRadiusFromDrag } from '../src/instruments/geometry-tools.js';
 
 const root = process.cwd();
 const errors = [];
@@ -87,6 +88,25 @@ const laser=exists('src/tools/laser.js')?read('src/tools/laser.js'):'';
 if(!/pointerdown/.test(laser)||!/pointermove/.test(laser)||!/pointerup/.test(laser)) fail('Laser module має обробляти pointerdown/pointermove/pointerup.');
 if(!/laser-active/.test(laser)||!/laserDot/.test(laser)) fail('Laser module не має повного activation/overlay контракту.');
 if(/setPointerCapture/.test(laser)) fail('Laser module не повинен залежати від setPointerCapture — це нестабільно на touch/browser smoke.');
+
+// Geometry tools must calculate in their own local coordinate system after rotation.
+const local90=sceneDeltaToLocal(0,50,90);
+if(!near(local90.x,50,1e-8)||!near(local90.y,0,1e-8)) fail('Geometry local transform: 90° rotation is incorrect.');
+const local30=sceneDeltaToLocal(10*Math.cos(Math.PI/6),10*Math.sin(Math.PI/6),30);
+if(!near(local30.x,10,1e-8)||!near(local30.y,0,1e-8)) fail('Geometry local transform: rotated local X axis is incorrect.');
+const p0=protractorAngleFromPointer({pointerX:200,pointerY:100,pivotX:100,pivotY:100,rotation:0});
+if(!near(p0,0)) fail(`Protractor 0° readout incorrect: ${p0}`);
+const p60=protractorAngleFromPointer({pointerX:100+100*Math.cos(Math.PI/3),pointerY:100-100*Math.sin(Math.PI/3),pivotX:100,pivotY:100,rotation:0});
+if(!near(p60,60,1e-8)) fail(`Protractor 60° readout incorrect: ${p60}`);
+const rot=30*Math.PI/180;
+const localTheta=60*Math.PI/180;
+const sceneTheta=rot+localTheta;
+const pRot=protractorAngleFromPointer({pointerX:100+100*Math.cos(sceneTheta),pointerY:100-100*Math.sin(sceneTheta),pivotX:100,pivotY:100,rotation:30});
+if(!near(pRot,60,1e-8)) fail(`Rotated protractor must still read 60°, got ${pRot}`);
+const radiusRot=compassRadiusFromDrag({startRadius:80,dx:20*Math.cos(rot),dy:20*Math.sin(rot),rotation:30,min:30,max:150});
+if(!near(radiusRot,100,1e-8)) fail(`Rotated compass local radius drag incorrect: ${radiusRot}`);
+const radiusAcross=compassRadiusFromDrag({startRadius:80,dx:-20*Math.sin(rot),dy:20*Math.cos(rot),rotation:30,min:30,max:150});
+if(!near(radiusAcross,80,1e-8)) fail(`Compass perpendicular drag must not change radius, got ${radiusAcross}`);
 
 const graphSource=exists('src/math/graph.js')?read('src/math/graph.js'):'';
 if(/\bnew\s+Function\b|\beval\s*\(/.test(graphSource)) fail('Graph parser не повинен виконувати формули через Function/eval.');
