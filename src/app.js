@@ -37,10 +37,16 @@ async function toggleFullscreen(){try{if(!document.fullscreenElement)await docum
 
 function buildShapeMenu(){shapeMenu.innerHTML=Object.entries(SHAPE_LABELS).map(([key,label])=>`<button type="button" data-shape="${key}">${label}</button>`).join('');shapeMenu.addEventListener('click',e=>{const b=e.target.closest('[data-shape]');if(!b)return;state.tool=`shape:${b.dataset.shape}`;$$('.tool').forEach(x=>x.classList.remove('active'));$('#shapeBtn').classList.add('active');sceneEl.dataset.tool='shape';shapeMenu.hidden=true;});}
 function cancelShapeGesture(e){if(!shapeGesture)return;if(e?.pointerId!==undefined&&shapeGesture.pointerId!==null&&e.pointerId!==shapeGesture.pointerId)return;shapeGesture=null;$('#shapePreview').hidden=true;}
+function validShapeGesture(type,dx,dy){return type==='line'||type==='arrow'?Math.hypot(dx,dy)>=MIN_SHAPE_GESTURE:Math.min(Math.abs(dx),Math.abs(dy))>=MIN_SHAPE_GESTURE;}
 function createGestureShape(type,start,end){
   const dx=end.x-start.x,dy=end.y-start.y,length=Math.hypot(dx,dy),angle=Math.atan2(dy,dx)*180/Math.PI;
   if(type==='line')return objectManager.addShape('segment',{x:(start.x+end.x)/2-length/2,y:(start.y+end.y)/2-10,w:length,h:20},{minW:8,minH:20,rotation:angle});
   if(type==='arrow')return objectManager.addShape('arrow',{x:(start.x+end.x)/2-length/2,y:(start.y+end.y)/2-10,w:length,h:20},{minW:8,minH:20,rotation:angle});
+  if(type==='circle'){
+    const side=Math.max(40,Math.min(Math.abs(dx),Math.abs(dy)));
+    const x=dx>=0?start.x:start.x-side,y=dy>=0?start.y:start.y-side;
+    return objectManager.addShape('circle',{x,y,w:side,h:side});
+  }
   const x=Math.min(start.x,end.x),y=Math.min(start.y,end.y),w=Math.abs(dx),h=Math.abs(dy);
   return objectManager.addShape(type,{x,y,w,h});
 }
@@ -61,11 +67,10 @@ function bindShapeDrawing(){
   window.addEventListener('pointerup',e=>{
     if(!shapeGesture)return;
     if(shapeGesture.pointerId!==null&&e?.pointerId!==undefined&&e.pointerId!==shapeGesture.pointerId)return;
-    const{start,end,type}=shapeGesture;
-    const distance=Math.hypot(end.x-start.x,end.y-start.y);
+    const{start,end,type}=shapeGesture,dx=end.x-start.x,dy=end.y-start.y;
     $('#shapePreview').hidden=true;
     shapeGesture=null;
-    if(distance<MIN_SHAPE_GESTURE)return;
+    if(!validShapeGesture(type,dx,dy))return;
     const obj=createGestureShape(type,start,end);
     setTool('select');
     objectManager.select(obj.id);
@@ -82,7 +87,13 @@ function updateShapePreview(){
   if(directed){
     p.style.left=`${start.x}px`;p.style.top=`${start.y}px`;p.style.width=`${Math.hypot(dx,dy)}px`;p.style.height='0px';p.style.transform=`rotate(${Math.atan2(dy,dx)*180/Math.PI}deg)`;
   }else{
-    p.style.transform='';p.style.left=`${Math.min(start.x,end.x)}px`;p.style.top=`${Math.min(start.y,end.y)}px`;p.style.width=`${Math.abs(dx)}px`;p.style.height=`${Math.abs(dy)}px`;
+    p.style.transform='';
+    if(type==='circle'){
+      const side=Math.min(Math.abs(dx),Math.abs(dy));
+      p.style.left=`${dx>=0?start.x:start.x-side}px`;p.style.top=`${dy>=0?start.y:start.y-side}px`;p.style.width=`${side}px`;p.style.height=`${side}px`;
+    }else{
+      p.style.left=`${Math.min(start.x,end.x)}px`;p.style.top=`${Math.min(start.y,end.y)}px`;p.style.width=`${Math.abs(dx)}px`;p.style.height=`${Math.abs(dy)}px`;
+    }
   }
 }
 
