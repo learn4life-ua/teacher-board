@@ -3,6 +3,20 @@ import assert from 'node:assert/strict';
 
 const baseURL = process.env.TB_URL || 'http://127.0.0.1:4173/preview.html';
 
+async function drawShape(page, shape, from, to) {
+  await page.click('#shapeBtn');
+  assert.equal(await page.locator('#shapeMenu').isVisible(), true, 'shape menu did not open');
+  await page.locator(`#shapeMenu [data-shape="${shape}"]`).click();
+  assert.equal(await page.locator('#shapeMenu').isHidden(), true, 'shape menu did not close after selection');
+  const box = await page.locator('#scene').boundingBox();
+  assert.ok(box, 'no scene box');
+  await page.mouse.move(box.x + from.x, box.y + from.y);
+  await page.mouse.down();
+  await page.mouse.move(box.x + to.x, box.y + to.y);
+  await page.mouse.up();
+  await page.waitForTimeout(80);
+}
+
 async function runCase(name, contextOptions = {}) {
   console.log(`[${name}] start`);
   const browser = await chromium.launch({ headless: true });
@@ -18,35 +32,16 @@ async function runCase(name, contextOptions = {}) {
   const narrow = (contextOptions.viewport?.width || 9999) <= 900 || contextOptions.isMobile;
 
   assert.equal(await page.locator('#shapeMenu').isHidden(), true, `${name}: shape menu must start closed`);
-  await page.click('#shapeBtn');
-  assert.equal(await page.locator('#shapeMenu').isVisible(), true, `${name}: shape menu did not open`);
-  await page.locator('#shapeMenu [data-shape="rect"]').click();
-  assert.equal(await page.locator('#shapeMenu').isHidden(), true, `${name}: shape menu did not close after selection`);
+  assert.equal(await page.locator('.tool.active[data-tool="select"]').count(), 1, `${name}: select must be active on startup`);
 
-  const scene = page.locator('#scene');
-  const box = await scene.boundingBox();
-  assert.ok(box, `${name}: no scene box`);
-  await page.mouse.move(box.x + 220, box.y + 180);
-  await page.mouse.down();
-  await page.mouse.move(box.x + 430, box.y + 320);
-  await page.mouse.up();
-  await page.waitForTimeout(100);
+  await drawShape(page, 'rect', { x: 220, y: 180 }, { x: 430, y: 320 });
   assert.ok(await page.locator('.scene-object').count() >= 1, `${name}: shape object was not created`);
   console.log(`[${name}] shape ok`);
 
   if (narrow) {
     await page.click('#mobilePanelBtn');
     assert.equal(await page.locator('#sidePanel').evaluate(() => document.body.classList.contains('side-panel-open')), true, `${name}: mobile panel did not open`);
-    await page.waitForTimeout(250);
-    const debug=await page.evaluate(()=>{
-      const panel=document.querySelector('#sidePanel');
-      const button=document.querySelector('#addTextBtn');
-      const pr=panel.getBoundingClientRect(),br=button.getBoundingClientRect();
-      const hit=document.elementFromPoint(br.left+br.width/2,br.top+br.height/2);
-      const pcs=getComputedStyle(panel);
-      return {innerWidth,innerHeight,media:matchMedia('(max-width: 900px)').matches,bodyClass:document.body.className,panelParent:panel.parentElement?.tagName,panelRect:{x:pr.x,y:pr.y,w:pr.width,h:pr.height},buttonRect:{x:br.x,y:br.y,w:br.width,h:br.height},panelZ:pcs.zIndex,panelPosition:pcs.position,panelTransform:pcs.transform,panelVisibility:pcs.visibility,panelPointer:pcs.pointerEvents,hit:hit?`${hit.tagName}#${hit.id}.${hit.className}`:null};
-    });
-    console.log(`[${name}] drawer debug ${JSON.stringify(debug)}`);
+    await page.waitForTimeout(180);
   }
 
   await page.fill('#textValue', 'x² + y² = 25');
@@ -55,13 +50,70 @@ async function runCase(name, contextOptions = {}) {
   await page.fill('#graphExpression', 'x^2');
   await page.click('#addGraphBtn');
   assert.ok(await page.locator('.graph-object').count() >= 1, `${name}: graph object was not created`);
-  console.log(`[${name}] text+graph ok`);
+  assert.ok(await page.locator('.graph-object .graph-label').count() >= 8, `${name}: graph numeric scale is missing`);
+  assert.equal(await page.locator('.graph-object .graph-axis-name').count(), 2, `${name}: graph axis names are missing`);
+  console.log(`[${name}] text+graph scale ok`);
 
   if (narrow) await page.click('#closeSidePanelBtn');
 
   await page.locator('.instrument-btn[data-instrument="ruler"]').click();
-  assert.ok(await page.locator('.geometry-tool').count() >= 1, `${name}: ruler was not created`);
+  assert.ok(await page.locator('.geometry-ruler').count() >= 1, `${name}: ruler was not created`);
   console.log(`[${name}] ruler ok`);
+
+  if (name === 'desktop') {
+    const objectCountBeforeRuler = await page.locator('.scene-object').count();
+    await page.locator('.geometry-ruler .geometry-action').click();
+    assert.equal(await page.locator('.scene-object').count(), objectCountBeforeRuler + 1, `${name}: ruler did not construct a segment`);
+
+    await page.locator('.instrument-btn[data-instrument="protractor"]').click();
+    assert.equal(await page.locator('.geometry-protractor .angle-readout').count(), 1, `${name}: protractor angle readout missing`);
+    const beforeAngle = await page.locator('.scene-object').count();
+    await page.locator('.geometry-protractor .geometry-action').click();
+    assert.equal(await page.locator('.scene-object').count(), beforeAngle + 2, `${name}: protractor did not construct two rays`);
+
+    await page.locator('.instrument-btn[data-instrument="compass"]').click();
+    assert.equal(await page.locator('.geometry-compass .compass-readout').count(), 1, `${name}: compass radius readout missing`);
+    const beforeCircle = await page.locator('.scene-object').count();
+    await page.locator('.geometry-compass .geometry-action').click();
+    assert.equal(await page.locator('.scene-object').count(), beforeCircle + 1, `${name}: compass did not construct a circle`);
+    await page.locator('.geometry-compass .compass-mode[data-mode="arc"]').click();
+    const beforeArc = await page.locator('.scene-object').count();
+    await page.locator('.geometry-compass .geometry-action').click();
+    assert.equal(await page.locator('.scene-object').count(), beforeArc + 1, `${name}: compass did not construct an arc`);
+    console.log(`[${name}] geometry constructions ok`);
+
+    const beforeCurtain = await page.locator('.scene-object').count();
+    await drawShape(page, 'curtain', { x: 610, y: 160 }, { x: 850, y: 360 });
+    assert.equal(await page.locator('.scene-object').count(), beforeCurtain + 1, `${name}: curtain object was not created`);
+    assert.ok(await page.locator('.scene-object svg rect[fill="#e7ecea"]').count() >= 1, `${name}: curtain visual is missing`);
+
+    await page.click('#undoBtn');
+    assert.equal(await page.locator('.scene-object').count(), beforeCurtain, `${name}: undo did not remove curtain`);
+    await page.click('#redoBtn');
+    assert.equal(await page.locator('.scene-object').count(), beforeCurtain + 1, `${name}: redo did not restore curtain`);
+    console.log(`[${name}] curtain+undo/redo ok`);
+
+    const beforeLaserObjects = await page.locator('.scene-object').count();
+    await page.click('#laserBtn');
+    assert.equal(await page.locator('#laserBtn').evaluate(el => el.classList.contains('active')), true, `${name}: laser did not activate`);
+    const sceneBox = await page.locator('#scene').boundingBox();
+    assert.ok(sceneBox, `${name}: no scene box for laser`);
+    await page.mouse.move(sceneBox.x + 500, sceneBox.y + 420);
+    await page.mouse.down();
+    await page.mouse.move(sceneBox.x + 580, sceneBox.y + 460);
+    assert.equal(await page.locator('#laserDot').isVisible(), true, `${name}: laser dot is not visible while pointing`);
+    await page.mouse.up();
+    await page.waitForTimeout(260);
+    assert.equal(await page.locator('#laserDot').isHidden(), true, `${name}: laser dot did not hide after pointer up`);
+    assert.equal(await page.locator('.scene-object').count(), beforeLaserObjects, `${name}: laser must not create board objects`);
+    await page.click('#laserBtn');
+    console.log(`[${name}] laser ok`);
+
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('teacherboard.v2') || 'null'));
+    assert.ok(saved?.pages?.length >= 1, `${name}: autosave did not persist v2 state`);
+    assert.ok(saved.pages.some(p => Array.isArray(p.objects) && p.objects.length > 0), `${name}: autosave state has no objects`);
+    console.log(`[${name}] autosave ok`);
+  }
 
   const beforePages = await page.locator('.page-tab').count();
   await page.click('#addPageBtn');
