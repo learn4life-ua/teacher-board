@@ -33,6 +33,9 @@ jobs:
       - name: Check zoom coordinate contract
         run: node tests/zoom-check.mjs
 
+      - name: Check geometry bounds contract
+        run: node tests/bounds-check.mjs
+
       - name: Check page history contract
         run: node tests/history-check.mjs
 
@@ -127,9 +130,18 @@ jobs:
         run: |
           set -euo pipefail
           grep -q "ctx.globalAlpha = isMarker ? 0.24 : 1" src/drawing/freehand.js
+          grep -q 'this.pointerId = e.pointerId' src/drawing/freehand.js
+          grep -q 'matchesPointer' src/drawing/freehand.js
           grep -q "setRangeText(value,start,end,'end')" src/app.js
+          grep -q 'MIN_SHAPE_GESTURE=8' src/app.js
+          grep -q 'pointerId:e.pointerId' src/app.js
+          grep -q 'validShapeGesture' src/app.js
           grep -q 'historyPushed:false' src/objects/object-manager.js
+          grep -q 'pointerId:e.pointerId' src/objects/object-manager.js
+          grep -q 'matchesPointer' src/objects/object-manager.js
           grep -q 'historyPushed:false' src/instruments/geometry-tools.js
+          grep -q 'pointerId:e.pointerId' src/instruments/geometry-tools.js
+          grep -q 'matchesPointer' src/instruments/geometry-tools.js
           grep -q 'if(this.drag.historyPushed)return true' src/objects/object-manager.js
           grep -q 'if(this.drag.historyPushed)return true' src/instruments/geometry-tools.js
           grep -q 'ensureDragHistory' src/objects/object-manager.js
@@ -145,6 +157,8 @@ jobs:
           grep -q "closest?.('.tool,.instrument-btn')" src/tools/laser.js
           grep -q 'control===button' src/tools/laser.js
           grep -q 'setActive(false)' src/tools/laser.js
+          grep -q 'scene:not(\[data-tool="select"\]) .scene-object' css/touch.css
+          grep -q 'scene:not(\[data-tool="select"\]) .geometry-tool' css/touch.css
           if grep -Eq 'pointerDownObject\([^)]*\).*pushHistory' src/objects/object-manager.js; then
             echo 'Object selection must not create an empty undo snapshot.'
             exit 1
