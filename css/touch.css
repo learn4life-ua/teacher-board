@@ -15,6 +15,11 @@
   -webkit-tap-highlight-color:transparent;
 }
 
+.scene:not([data-tool="select"]) .scene-object,
+.scene:not([data-tool="select"]) .geometry-tool{
+  pointer-events:none!important;
+}
+
 .shape-preview.directed{
   height:0!important;
   border:0!important;
