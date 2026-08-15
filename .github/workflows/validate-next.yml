@@ -45,6 +45,9 @@ jobs:
       - name: Check page history contract
         run: node tests/history-check.mjs
 
+      - name: Check storage recovery contract
+        run: node tests/storage-check.mjs
+
       - name: Check graph performance guards
         run: node tests/graph-performance-check.mjs
 
