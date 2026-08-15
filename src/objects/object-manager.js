@@ -1,6 +1,6 @@
 import { activePage, uid } from '../core/state.js';
 import { pushHistory } from '../core/history.js';
-import { sceneDeltaFromClient } from '../core/scene.js';
+import { sceneDeltaFromClient, sceneDeltaToLocalAxes } from '../core/scene.js';
 import { shapeSvg } from './shapes.js';
 import { graphSvg, createGraphObject } from '../math/graph.js';
 import { textMarkup } from './text.js';
@@ -53,17 +53,18 @@ export class ObjectManager {
     if(this.drag.mode==='move'){
       obj.x=clamp(this.drag.x+dx,-obj.w+20,1580);obj.y=clamp(this.drag.y+dy,-obj.h+20,880);
     }else if(this.drag.mode==='resize'){
+      const local=sceneDeltaToLocalAxes(dx,dy,this.drag.rotation),rdx=local.x,rdy=local.y;
       const minW=obj.kind==='graph'?320:obj.kind==='text'?120:obj.kind==='image'?80:40;
       const minH=obj.kind==='graph'?240:obj.kind==='text'?50:obj.kind==='image'?60:20;
       if(obj.kind==='image'){
         const aspect=Math.max(.05,this.drag.aspect||1);
-        if(Math.abs(dx)>=Math.abs(dy)){
-          obj.w=Math.max(minW,this.drag.w+dx);obj.h=Math.max(minH,obj.w/aspect);obj.w=obj.h*aspect;
+        if(Math.abs(rdx)>=Math.abs(rdy)){
+          obj.w=Math.max(minW,this.drag.w+rdx);obj.h=Math.max(minH,obj.w/aspect);obj.w=obj.h*aspect;
         }else{
-          obj.h=Math.max(minH,this.drag.h+dy);obj.w=Math.max(minW,obj.h*aspect);obj.h=obj.w/aspect;
+          obj.h=Math.max(minH,this.drag.h+rdy);obj.w=Math.max(minW,obj.h*aspect);obj.h=obj.w/aspect;
         }
       }else{
-        obj.w=Math.max(minW,this.drag.w+dx);obj.h=Math.max(minH,this.drag.h+dy);
+        obj.w=Math.max(minW,this.drag.w+rdx);obj.h=Math.max(minH,this.drag.h+rdy);
       }
       if(obj.kind==='text')obj.fontSize=clamp(Math.round(32*obj.h/100),14,96);
     }else if(this.drag.mode==='rotate'){
