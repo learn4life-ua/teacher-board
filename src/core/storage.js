@@ -9,6 +9,14 @@ const OBJECT_KINDS = new Set(['shape','graph','text','image']);
 const SHAPE_TYPES = new Set(['segment','line','arrow','rect','circle','ellipse','triangle','rightTriangle','parallelogram','trapezoid','rhombus','angle','arc','circleArc','axes','numberLine','xyTable','curtain']);
 const INSTRUMENT_TYPES = new Set(['ruler','protractor','compass']);
 const TOOLS = new Set(['select','pen','marker','eraser']);
+const MAX_OBJECT_W = 3200;
+const MAX_OBJECT_H = 1800;
+const MAX_INSTRUMENT_W = 1600;
+const MAX_INSTRUMENT_H = 900;
+const POSITION_X_MIN = -3200;
+const POSITION_X_MAX = 3200;
+const POSITION_Y_MIN = -1800;
+const POSITION_Y_MAX = 1800;
 const LEGACY_NUMBER_LINES = {
   number5: { numberMin: -5, numberMax: 5, showLabels: true },
   number10: { numberMin: -10, numberMax: 10, showLabels: true },
@@ -21,6 +29,10 @@ function id(prefix = 'm') {
 
 const finite=(value,fallback=0)=>Number.isFinite(Number(value))?Number(value):fallback;
 const clamp=(value,min,max,fallback=min)=>Math.max(min,Math.min(max,finite(value,fallback)));
+const normalizedRotation=value=>{
+  const angle=finite(value,0)%360;
+  return angle<0?angle+360:angle;
+};
 
 function normalizeNumberLine(copy){
   const alias=LEGACY_NUMBER_LINES[copy.shape];
@@ -43,20 +55,21 @@ function normalizeObject(obj) {
   if (!obj || typeof obj !== 'object' || !OBJECT_KINDS.has(obj.kind)) return null;
   const copy = { ...obj };
   copy.id = String(copy.id || id(copy.kind || 'o'));
-  copy.x = finite(copy.x, 0);
-  copy.y = finite(copy.y, 0);
-  copy.w = Math.max(20, finite(copy.w, copy.kind === 'graph' ? 760 : 160));
-  copy.h = Math.max(20, finite(copy.h, copy.kind === 'graph' ? 560 : 100));
-  copy.rotation = finite(copy.rotation, 0);
+  copy.x = clamp(copy.x,POSITION_X_MIN,POSITION_X_MAX,0);
+  copy.y = clamp(copy.y,POSITION_Y_MIN,POSITION_Y_MAX,0);
+  copy.w = clamp(copy.w,20,MAX_OBJECT_W,copy.kind === 'graph' ? 760 : 160);
+  copy.h = clamp(copy.h,20,MAX_OBJECT_H,copy.kind === 'graph' ? 560 : 100);
+  copy.rotation = normalizedRotation(copy.rotation);
 
   if (copy.kind === 'shape') {
     normalizeNumberLine(copy);
     if (!SHAPE_TYPES.has(copy.shape)) return null;
     if(copy.shape==='circle'){
-      const side=Math.max(40,copy.w,copy.h);
+      const side=clamp(Math.max(copy.w,copy.h),40,Math.min(MAX_OBJECT_W,MAX_OBJECT_H),160);
       copy.w=side;
       copy.h=side;
     }
+    if(['segment','arrow'].includes(copy.shape))copy.h=clamp(copy.h,8,120,20);
     copy.color = typeof copy.color === 'string' ? copy.color : '#245d55';
     copy.lineWidth = clamp(copy.lineWidth,1,40,4);
   } else if (copy.kind === 'graph') {
@@ -84,7 +97,10 @@ function normalizeStroke(stroke){
   const points=stroke.points.map(point=>{
     if(!point||typeof point!=='object')return null;
     const x=Number(point.x),y=Number(point.y);
-    return Number.isFinite(x)&&Number.isFinite(y)?{x,y}:null;
+    return Number.isFinite(x)&&Number.isFinite(y)?{
+      x:clamp(x,POSITION_X_MIN,POSITION_X_MAX,0),
+      y:clamp(y,POSITION_Y_MIN,POSITION_Y_MAX,0)
+    }:null;
   }).filter(Boolean);
   if(!points.length)return null;
   return {
@@ -99,10 +115,16 @@ function normalizeStroke(stroke){
 
 function normalizeInstrument(item){
   if(!item||typeof item!=='object'||!INSTRUMENT_TYPES.has(item.type))return null;
-  const base={...item,id:String(item.id||id(item.type)),x:finite(item.x,520),y:finite(item.y,290),rotation:finite(item.rotation,0)};
-  if(item.type==='ruler')return {...base,w:Math.max(260,finite(item.w,520)),h:Math.max(72,finite(item.h,96))};
-  if(item.type==='protractor')return {...base,w:Math.max(180,finite(item.w,420)),h:Math.max(140,finite(item.h,220)),angle:clamp(item.angle,0,180,60)};
-  const w=Math.max(180,finite(item.w,260)),h=Math.max(140,finite(item.h,300)),maxRadius=Math.max(45,Math.min(w,h)*.45);
+  const base={
+    ...item,
+    id:String(item.id||id(item.type)),
+    x:clamp(item.x,POSITION_X_MIN,POSITION_X_MAX,520),
+    y:clamp(item.y,POSITION_Y_MIN,POSITION_Y_MAX,290),
+    rotation:normalizedRotation(item.rotation)
+  };
+  if(item.type==='ruler')return {...base,w:clamp(item.w,260,MAX_INSTRUMENT_W,520),h:clamp(item.h,72,240,96)};
+  if(item.type==='protractor')return {...base,w:clamp(item.w,180,MAX_INSTRUMENT_W,420),h:clamp(item.h,140,MAX_INSTRUMENT_H,220),angle:clamp(item.angle,0,180,60)};
+  const w=clamp(item.w,180,MAX_INSTRUMENT_W,260),h=clamp(item.h,140,MAX_INSTRUMENT_H,300),maxRadius=Math.max(45,Math.min(w,h)*.45);
   return {...base,w,h,radius:clamp(item.radius,30,maxRadius,92),mode:item.mode==='arc'?'arc':'circle',arcStart:finite(item.arcStart,0),arcEnd:finite(item.arcEnd,180)};
 }
 
