@@ -48,6 +48,7 @@ else{
   if(normalized.tool!=='select')fail(`Unknown tool must recover to select, got ${normalized.tool}.`);
   if(normalized.color!==fallback.color)fail('Invalid color must recover to fallback color.');
   if(normalized.lineWidth!==fallback.lineWidth)fail(`Missing/bad line width must recover to ${fallback.lineWidth}, got ${normalized.lineWidth}.`);
+  if(normalized.zoom!==1.25)fail(`Persisted zoom 1.37 must normalize to 1.25, got ${normalized.zoom}.`);
   if(normalized.activePage!==1)fail(`activePage must clamp to final page, got ${normalized.activePage}.`);
   if(normalized.pages.length!==2)fail('Page count must remain stable during sanitization.');
 
@@ -120,4 +121,4 @@ if(errors.length){
   errors.forEach(error=>console.error(`- ${error}`));
   process.exit(1);
 }
-console.log('TeacherBoard storage check: OK (corrupt data, legacy number lines, autosave quota handling)');
+console.log('TeacherBoard storage check: OK (corrupt data, zoom, legacy number lines, quota handling)');
