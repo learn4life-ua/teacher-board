@@ -3,7 +3,7 @@ const scene=document.querySelector('#scene');
 const dot=document.querySelector('#laserDot');
 
 if(button&&scene&&dot){
-  Object.assign(dot.style,{position:'absolute',width:'20px',height:'20px',borderRadius:'50%',background:'#ff2b2b',boxShadow:'0 0 0 6px rgba(255,43,43,.18),transform:'translate(-50%,-50%)',pointerEvents:'none',zIndex:'120'});
+  Object.assign(dot.style,{position:'absolute',width:'20px',height:'20px',borderRadius:'50%',background:'#ff2b2b',boxShadow:'0 0 0 6px rgba(255,43,43,.18)',transform:'translate(-50%,-50%)',pointerEvents:'none',zIndex:'120'});
   let active=false;
   let pressed=false;
   const setActive=value=>{
