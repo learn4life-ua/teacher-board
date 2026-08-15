@@ -7,6 +7,7 @@ import { SHAPE_LABELS } from './objects/shapes.js';
 import { FreehandDrawing } from './drawing/freehand.js';
 import { GeometryTools } from './instruments/geometry-tools.js';
 import { fileToDataUrl, readImageSize } from './objects/images.js';
+import { confirmDialog } from './ui/dialogs.js';
 
 let state=loadState(createState());
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
@@ -27,9 +28,9 @@ function addPage(){state.pages.push(createBlankPage(`Сторінка ${state.pa
 function renamePage(index){const page=state.pages[index],dialog=$('#renamePageDialog'),input=$('#renamePageInput');if(!page||!dialog||!input)return;renamePageIndex=index;input.value=page.name||`Сторінка ${index+1}`;if(typeof dialog.showModal==='function'&&!dialog.open)dialog.showModal();else dialog.setAttribute('open','');requestAnimationFrame(()=>{input.focus();input.select();});}
 function renameCurrentPage(){renamePage(state.activePage);}
 function bindPageRename(){const dialog=$('#renamePageDialog'),form=$('#renamePageForm'),input=$('#renamePageInput');if(!dialog||!form||!input)return;form.addEventListener('submit',e=>{e.preventDefault();const index=renamePageIndex,page=state.pages[index],next=input.value.trim();if(page&&next){page.name=next.slice(0,80);dialog.close?.('save');commit();}else input.focus();});$('#renamePageCancelBtn')?.addEventListener('click',()=>dialog.close?.('cancel'));dialog.addEventListener('close',()=>{renamePageIndex=null;});}
-function deletePage(){if(state.pages.length<=1)return;if(!confirm(`Видалити сторінку «${activePage(state).name}»?`))return;state.pages.splice(state.activePage,1);state.activePage=Math.min(state.activePage,state.pages.length-1);state.selection=null;resetHistory(state);commit();}
+async function deletePage(){if(state.pages.length<=1)return;const page=activePage(state);const ok=await confirmDialog($('#confirmActionDialog'),{title:'Видалити сторінку?',message:`Сторінку «${page.name}» буде видалено разом з усім її вмістом.`,confirmText:'Видалити',danger:true});if(!ok)return;state.pages.splice(state.activePage,1);state.activePage=Math.min(state.activePage,state.pages.length-1);state.selection=null;resetHistory(state);commit();}
 function duplicatePage(){const source=activePage(state);const clone=structuredClone(source);clone.id=createBlankPage().id;clone.name=`${source.name||`Сторінка ${state.activePage+1}`} — копія`;state.pages.splice(state.activePage+1,0,clone);state.activePage+=1;state.selection=null;resetHistory(state);commit();}
-function clearPage(){if(!confirm('Очистити поточну сторінку?'))return;pushHistory(state);const page=activePage(state);page.strokes=[];page.objects=[];page.instruments=[];state.selection=null;commit();}
+async function clearPage(){const page=activePage(state);const hasContent=page.strokes.length||page.objects.length||page.instruments.length;if(!hasContent)return;const ok=await confirmDialog($('#confirmActionDialog'),{title:'Очистити сторінку?',message:'Усі штрихи, об’єкти та геометричні інструменти на поточній сторінці буде прибрано. Дію можна скасувати через Undo.',confirmText:'Очистити',danger:true});if(!ok)return;pushHistory(state);page.strokes=[];page.objects=[];page.instruments=[];state.selection=null;commit();}
 async function toggleFullscreen(){try{if(!document.fullscreenElement)await document.documentElement.requestFullscreen?.();else await document.exitFullscreen?.();}catch(err){console.warn('Fullscreen unavailable',err);}}
 
 function buildShapeMenu(){shapeMenu.innerHTML=Object.entries(SHAPE_LABELS).map(([key,label])=>`<button type="button" data-shape="${key}">${label}</button>`).join('');shapeMenu.addEventListener('click',e=>{const b=e.target.closest('[data-shape]');if(!b)return;state.tool=`shape:${b.dataset.shape}`;$$('.tool').forEach(x=>x.classList.remove('active'));$('#shapeBtn').classList.add('active');sceneEl.dataset.tool='shape';shapeMenu.hidden=true;});}
