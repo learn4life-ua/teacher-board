@@ -24,7 +24,7 @@ export function shapeSvg(obj) {
     case 'angle': return wrap(`<path d="M95 92 H57 L4 8" ${stroke}/><path d="M73 92 A18 18 0 0 0 47 76" ${stroke}/>`);
     case 'arc': return wrap(`<path d="M4 78 Q50 4 96 78" ${stroke}/>`);
     case 'circleArc': return circleArcSvg(obj,stroke,wrap);
-    case 'axes': return axesSvg(stroke);
+    case 'axes': return axesSvg(obj,stroke);
     case 'numberLine': return numberLineSvg(stroke);
     case 'xyTable': return xyTableSvg(stroke);
     default:return '';
@@ -41,8 +41,9 @@ function circleArcSvg(obj,stroke,wrap){
   return wrap(`<path d="M${x1.toFixed(2)} ${y1.toFixed(2)} A46 46 0 ${large} 0 ${x2.toFixed(2)} ${y2.toFixed(2)}" ${stroke}/>`);
 }
 
-function axesSvg(stroke){
-  const ticks=[];for(let i=10;i<=90;i+=10){if(i===50)continue;const value=(i-50)/10;ticks.push(`<line x1="${i}" y1="48" x2="${i}" y2="52" ${stroke}/><line x1="48" y1="${100-i}" x2="52" y2="${100-i}" ${stroke}/><text x="${i}" y="57" text-anchor="middle" class="scale-label">${value}</text><text x="44" y="${100-i+2}" text-anchor="end" class="scale-label">${value}</text>`);}return `<svg viewBox="0 0 100 100" aria-hidden="true"><defs><marker id="tbArrow" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="currentColor"/></marker></defs><g opacity=".25" stroke="currentColor" stroke-width=".35">${Array.from({length:9},(_,k)=>{const p=(k+1)*10;return `<line x1="${p}" y1="5" x2="${p}" y2="95"/><line x1="5" y1="${p}" x2="95" y2="${p}"/>`;}).join('')}</g><line x1="5" y1="50" x2="96" y2="50" ${stroke} marker-end="url(#tbArrow)"/><line x1="50" y1="95" x2="50" y2="4" ${stroke} marker-end="url(#tbArrow)"/>${ticks.join('')}<text x="94" y="46" class="axis-label">x</text><text x="54" y="8" class="axis-label">y</text><text x="46" y="57" class="scale-label">0</text></svg>`;
+function axesSvg(obj,stroke){
+  const markerId=`tbArrow-${String(obj.id||'axes').replace(/[^a-zA-Z0-9_-]/g,'')}`;
+  const ticks=[];for(let i=10;i<=90;i+=10){if(i===50)continue;const value=(i-50)/10;ticks.push(`<line x1="${i}" y1="48" x2="${i}" y2="52" ${stroke}/><line x1="48" y1="${100-i}" x2="52" y2="${100-i}" ${stroke}/><text x="${i}" y="57" text-anchor="middle" class="scale-label">${value}</text><text x="44" y="${100-i+2}" text-anchor="end" class="scale-label">${value}</text>`);}return `<svg viewBox="0 0 100 100" aria-hidden="true"><defs><marker id="${markerId}" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="currentColor"/></marker></defs><g opacity=".25" stroke="currentColor" stroke-width=".35">${Array.from({length:9},(_,k)=>{const p=(k+1)*10;return `<line x1="${p}" y1="5" x2="${p}" y2="95"/><line x1="5" y1="${p}" x2="95" y2="${p}"/>`;}).join('')}</g><line x1="5" y1="50" x2="96" y2="50" ${stroke} marker-end="url(#${markerId})"/><line x1="50" y1="95" x2="50" y2="4" ${stroke} marker-end="url(#${markerId})"/>${ticks.join('')}<text x="94" y="46" class="axis-label">x</text><text x="54" y="8" class="axis-label">y</text><text x="46" y="57" class="scale-label">0</text></svg>`;
 }
 function numberLineSvg(stroke){const ticks=[];for(let n=-5;n<=5;n++){const x=50+n*8.5;ticks.push(`<line x1="${x}" y1="43" x2="${x}" y2="57" ${stroke}/><text x="${x}" y="70" text-anchor="middle" class="scale-label">${n}</text>`);}return `<svg viewBox="0 0 100 100" aria-hidden="true"><line x1="4" y1="50" x2="96" y2="50" ${stroke}/>${ticks.join('')}</svg>`;}
 function xyTableSvg(stroke){
