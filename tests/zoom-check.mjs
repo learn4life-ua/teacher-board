@@ -54,10 +54,25 @@ for(const test of imageCases){
 const tinyImage=resizeObjectDimensions({kind:'image',startW:100,startH:75,aspect:4/3,dx:-1000,dy:-1000,rotation:0});
 if(!near(tinyImage.w/tinyImage.h,4/3,1e-8)||tinyImage.w<80||tinyImage.h<60)fail('Image minimum resize must preserve aspect ratio.');
 
+for(const rotation of [0,45,90]){
+  const radians=rotation*Math.PI/180;
+  const circle=resizeObjectDimensions({kind:'shape',shape:'circle',startW:160,startH:160,dx:100*Math.cos(radians),dy:100*Math.sin(radians),rotation});
+  if(!near(circle.w,circle.h,1e-8))fail(`Circle became non-square after ${rotation}° resize: ${circle.w}×${circle.h}.`);
+  if(circle.w<40)fail(`Circle resize broke minimum side after ${rotation}°.`);
+}
+const segment=resizeObjectDimensions({kind:'shape',shape:'segment',startW:180,startH:20,dx:80,dy:70,rotation:0});
+if(segment.h!==20||segment.w!==260)fail(`Segment resize must change length only, got ${segment.w}×${segment.h}.`);
+const arrow=resizeObjectDimensions({kind:'shape',shape:'arrow',startW:180,startH:20,dx:0,dy:80,rotation:90});
+if(arrow.h!==20||!near(arrow.w,260))fail(`Rotated arrow resize must follow its local length axis, got ${arrow.w}×${arrow.h}.`);
+
 const app=fs.readFileSync('src/app.js','utf8');
 if(!/setZoom\(state\.zoom\+\.25\)/.test(app)||!/setZoom\(state\.zoom-\.25\)/.test(app)){
   fail('Toolbar zoom buttons must step by 25%.');
 }
+if(!app.includes('MIN_SHAPE_GESTURE=8'))fail('Shape gesture threshold must remain enabled.');
+if(!app.includes('pointerId:e.pointerId??null'))fail('Shape gestures must track pointerId for multi-touch safety.');
+if(!app.includes("type==='line'||type==='arrow'"))fail('Directed line/arrow gesture contract is missing.');
+if(!app.includes("type==='circle'"))fail('Circle gesture constraint is missing.');
 const objects=fs.readFileSync('src/objects/object-manager.js','utf8');
 const geometry=fs.readFileSync('src/instruments/geometry-tools.js','utf8');
 if(!objects.includes('sceneDeltaFromClient')) fail('Object drag must use the shared scene delta helper.');
@@ -82,4 +97,4 @@ if(errors.length){
   errors.forEach(error=>console.error(`- ${error}`));
   process.exit(1);
 }
-console.log('TeacherBoard zoom check: OK (zoom presets, shared scene, rotated resize, image aspect ratio)');
+console.log('TeacherBoard zoom check: OK (zoom presets, shared scene, rotated resize, image/circle/directed-shape geometry)');
