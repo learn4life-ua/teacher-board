@@ -54,7 +54,27 @@ async function insertImageFile(file){
     }
   }catch(err){console.error(err);alert('Не вдалося вставити зображення.');}
 }
-function bindImages(){$('#imageBtn').addEventListener('click',()=>$('#imageInput').click());$('#imageInput').addEventListener('change',e=>{const file=e.target.files?.[0];if(file)insertImageFile(file);e.target.value='';});window.addEventListener('paste',e=>{const file=[...(e.clipboardData?.files||[])].find(f=>f.type.startsWith('image/'));if(file){e.preventDefault();insertImageFile(file);}});}
+function clipboardImageFile(data){
+  const fromFiles=[...(data?.files||[])].find(file=>file.type?.startsWith('image/'));
+  if(fromFiles)return fromFiles;
+  for(const item of [...(data?.items||[])]){
+    if(item.kind==='file'&&item.type?.startsWith('image/')){
+      const file=item.getAsFile?.();
+      if(file)return file;
+    }
+  }
+  return null;
+}
+function bindImages(){
+  $('#imageBtn').addEventListener('click',()=>$('#imageInput').click());
+  $('#imageInput').addEventListener('change',e=>{const file=e.target.files?.[0];if(file)insertImageFile(file);e.target.value='';});
+  window.addEventListener('paste',e=>{
+    const file=clipboardImageFile(e.clipboardData);
+    if(!file)return;
+    e.preventDefault();
+    insertImageFile(file);
+  });
+}
 
 function openSidePanel(){document.body.classList.add('side-panel-open');$('#panelScrim').hidden=false;}
 function closeSidePanel(){document.body.classList.remove('side-panel-open');$('#panelScrim').hidden=true;}
