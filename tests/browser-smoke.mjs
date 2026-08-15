@@ -134,6 +134,33 @@ async function runLegacyRollbackCase(){
   }
 }
 
+async function desktopDrawingExtras(page){
+  const box=await page.locator('#drawingCanvas').boundingBox();
+  assert.ok(box,'desktop: drawing canvas box missing');
+  const from={x:Math.min(520,box.width*0.46),y:Math.min(390,box.height*0.46)};
+  const to={x:from.x+120,y:from.y};
+  const sampleX=Math.round((from.x+to.x)/2);
+  const sampleY=Math.round(from.y);
+
+  await page.click('.tool[data-tool="pen"]');
+  await page.mouse.move(box.x+from.x,box.y+from.y);
+  await page.mouse.down();
+  await page.mouse.move(box.x+to.x,box.y+to.y,{steps:8});
+  await page.mouse.up();
+  const alphaBefore=await page.locator('#drawingCanvas').evaluate((canvas,{x,y})=>canvas.getContext('2d').getImageData(x,y,1,1).data[3],{x:sampleX,y:sampleY});
+  assert.ok(alphaBefore>0,'desktop: pen stroke did not paint an opaque canvas pixel');
+
+  await page.click('.tool[data-tool="eraser"]');
+  await page.mouse.move(box.x+from.x,box.y+from.y);
+  await page.mouse.down();
+  await page.mouse.move(box.x+to.x,box.y+to.y,{steps:8});
+  await page.mouse.up();
+  const alphaAfter=await page.locator('#drawingCanvas').evaluate((canvas,{x,y})=>canvas.getContext('2d').getImageData(x,y,1,1).data[3],{x:sampleX,y:sampleY});
+  assert.ok(alphaAfter<alphaBefore,'desktop: eraser did not remove drawing canvas alpha');
+  await page.click('.tool[data-tool="select"]');
+  console.log('[desktop] transparent eraser ok');
+}
+
 async function desktopExtras(page){
   const beforeCurtain=await page.locator('.scene-object').count();
   await drawShape(page,'curtain',{x:55,y:80},{x:180,y:165});
@@ -205,6 +232,8 @@ async function runCase(name,contextOptions={}){
     assert.equal(await page.locator('#shapeMenu').isHidden(),true,`${name}: shape menu must start closed`);
     assert.equal(await page.locator('.tool.active[data-tool="select"]').count(),1,`${name}: select must be active on startup`);
 
+    if(name==='desktop')await desktopDrawingExtras(page);
+
     await drawShape(page,'rect',{x:220,y:180},{x:430,y:320});
     assert.ok(await page.locator('.scene-object').count()>=1,`${name}: shape object was not created`);
     console.log(`[${name}] shape ok`);
@@ -236,6 +265,7 @@ async function runCase(name,contextOptions={}){
       const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('teacherboard.v2')||'null'));
       assert.ok(saved?.pages?.length>=1,'desktop: autosave did not persist v2 state');
       assert.ok(saved.pages.some(p=>Array.isArray(p.objects)&&p.objects.length>0),'desktop: autosave has no objects');
+      assert.ok(saved.pages.some(p=>Array.isArray(p.strokes)&&p.strokes.some(s=>s.tool==='eraser')),'desktop: autosave has no eraser stroke');
       console.log('[desktop] autosave ok');
     }
 
