@@ -77,3 +77,20 @@ jobs:
             echo 'Legacy page rename prompt must not return.'
             exit 1
           fi
+
+      - name: Check destructive action dialog contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'id="confirmActionDialog"' preview.html
+          grep -q 'data-dialog-title' preview.html
+          grep -q 'data-dialog-message' preview.html
+          grep -q 'data-dialog-cancel' preview.html
+          grep -q 'data-dialog-confirm' preview.html
+          grep -q "import { confirmDialog } from './ui/dialogs.js'" src/app.js
+          grep -q 'confirmDialog' src/ui/dialogs.js
+          grep -q 'button.danger' css/touch.css
+          if grep -Eq '\bconfirm\s*\(' src/app.js; then
+            echo 'Browser confirm() must not be used for destructive page actions.'
+            exit 1
+          fi
