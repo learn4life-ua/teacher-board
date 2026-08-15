@@ -16,6 +16,20 @@ const FUNCTIONS = {
 };
 const CONSTANTS = { pi: Math.PI, e: Math.E };
 
+function escapeText(value){
+  return String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
+}
+function escapeAttribute(value){
+  return escapeText(value).replaceAll('"','&quot;').replaceAll("'",'&#39;');
+}
+function safeColor(value){
+  const color=String(value||'').trim();
+  if(/^#[0-9a-f]{3,8}$/i.test(color))return color;
+  if(/^rgba?\(\s*[-\d.%\s,]+\)$/i.test(color))return color;
+  if(/^hsla?\(\s*[-\d.%\s,]+\)$/i.test(color))return color;
+  return '#245d55';
+}
+
 function normalizeExpression(expr) {
   return String(expr || 'x')
     .trim()
@@ -258,8 +272,11 @@ export function graphSvg(g) {
     error = 'Некоректний вираз';
   }
 
-  const title = String(g.expression).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
-  return `<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-label="Графік y=${title}">
+  const rawTitle=String(g.expression??'x');
+  const title=escapeText(rawTitle);
+  const ariaTitle=escapeAttribute(rawTitle);
+  const curveColor=safeColor(g.color);
+  return `<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-label="Графік y=${ariaTitle}">
     <rect class="graph-bg" x="1" y="1" width="798" height="598" rx="8"/>
     ${grid.join('')}
     <line class="graph-axis" x1="${pad}" y1="${axisX}" x2="${width-pad}" y2="${axisX}"/>
@@ -269,7 +286,7 @@ export function graphSvg(g) {
     <text class="graph-axis-name" x="${width-pad-6}" y="${axisX-10}" text-anchor="end">x</text>
     <text class="graph-axis-name" x="${axisY+10}" y="${pad+14}">y</text>
     <text class="graph-title" x="${pad+8}" y="${pad-12}">y = ${title}</text>
-    ${error ? `<text class="graph-error" x="400" y="300" text-anchor="middle">${error}</text>` : `<path class="graph-curve" style="stroke:${g.color || '#245d55'}" d="${path.trim()}"/>`}
+    ${error ? `<text class="graph-error" x="400" y="300" text-anchor="middle">${error}</text>` : `<path class="graph-curve" style="stroke:${curveColor}" d="${path.trim()}"/>`}
   </svg>`;
 }
 
