@@ -37,7 +37,12 @@ export class ObjectManager {
     if(obj.id===this.state.selection&&!obj.locked) el.insertAdjacentHTML('beforeend','<span class="object-handle resize-handle" data-handle="resize" title="Змінити розмір"></span><span class="object-handle rotate-handle" data-handle="rotate" title="Повернути">↻</span><button class="object-delete" type="button" title="Видалити">×</button>');
     if(!obj.locked){
       el.addEventListener('pointerdown',e=>this.pointerDownObject(e,obj));
-      el.addEventListener('dblclick',e=>{if(obj.kind!=='text')return;e.stopPropagation();const next=prompt('Редагувати текст:',obj.text);if(next!==null)this.updateSelected({text:next});});
+      el.addEventListener('dblclick',e=>{
+        if(!['text','graph'].includes(obj.kind))return;
+        e.preventDefault();e.stopPropagation();
+        this.select(obj.id);
+        this.layer.dispatchEvent(new CustomEvent('objectedit',{detail:{id:obj.id,kind:obj.kind}}));
+      });
     }
     el.querySelector('.object-delete')?.addEventListener('pointerdown',e=>e.stopPropagation());
     el.querySelector('.object-delete')?.addEventListener('click',e=>{e.stopPropagation();this.deleteSelected();});
