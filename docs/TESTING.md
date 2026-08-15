@@ -7,9 +7,13 @@
 GitHub Actions виконує два незалежні контури перевірки:
 
 - `Validate TeacherBoard Next` — синтаксис JavaScript, import-шляхи, критичні модулі, DOM-контракт `preview.html` і статичний контракт лазера;
-- `Browser Smoke TeacherBoard Next` — реальний Chromium для desktop, tablet touch та Android/Pixel viewport.
+- `Browser Smoke TeacherBoard Next` — реальний Chromium для legacy-міграції, desktop, tablet touch та Android/Pixel viewport.
 
 Успішний browser smoke перевіряє:
+- міграцію `teacherboard.v1` → `teacherboard.v2` у Chromium;
+- перенесення старого canvas-знімка в locked image object і старого тексту в text object;
+- повторне відкриття після міграції без дублювання об'єктів;
+- rollback міграції: при помилці запису v2 стара v1-копія відновлюється, частковий v2 і migration flag не залишаються;
 - меню фігур закрите на старті, а активним є «Вибір»;
 - створення фігури як `.scene-object`;
 - шторку як окремий об'єкт та undo/redo для неї;
@@ -99,11 +103,13 @@ GitHub Actions виконує два незалежні контури пере�
 
 ## 8. Legacy-міграція
 
-- [ ] Дошка з `teacherboard.v1` переноситься у v2 автоматично.
-- [ ] Старий PNG canvas зберігається як нижній заблокований image-шар.
-- [ ] Старі тексти переносяться як text-об'єкти.
-- [ ] Заблокований legacy raster не можна випадково рухати або видалити.
-- [ ] При нестачі localStorage стара v1-копія не втрачається.
+- [x] Chromium browser smoke підтверджує автоматичний перенос `teacherboard.v1` у v2.
+- [x] Старий PNG canvas переноситься як нижній `locked` image object 1600×900.
+- [x] Старі тексти переносяться як text objects зі збереженням координат і кольору.
+- [x] Заблокований legacy raster рендериться з `pointer-events: none`, тому його не можна випадково вибрати чи рухати.
+- [x] Повторне відкриття після міграції не дублює перенесені об'єкти.
+- [x] При симульованій помилці запису v2 стара v1-копія відновлюється; частковий v2 та migration flag не залишаються.
+- [ ] Окремо перевірити одну реальну велику стару дошку з фактичними матеріалами перед merge.
 
 ## 9. Фізичний touch-тест перед merge
 
@@ -123,8 +129,9 @@ GitHub Actions виконує два незалежні контури пере�
 ## 10. Перед merge
 
 - [x] GitHub Actions `Validate TeacherBoard Next` зелений.
-- [x] `Browser Smoke TeacherBoard Next` має успішний desktop/tablet/Android прогін.
+- [x] `Browser Smoke TeacherBoard Next` має успішний migration/desktop/tablet/Android прогін.
 - [x] `preview.html` не підключає `v2.js`, `v3.js` або `fixes-*`.
 - [ ] Пройти короткий фізичний touch-тест.
+- [ ] Перевірити одну реальну велику legacy-дошку після міграції.
 - [ ] Після ручної перевірки створити окремий commit із заміною `index.html`.
 - [ ] Legacy-файли видалити тільки після перевірки опублікованої нової версії.
