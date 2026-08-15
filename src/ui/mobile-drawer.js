@@ -3,13 +3,20 @@ const scrim=document.querySelector('#panelScrim');
 const toggle=document.querySelector('#mobilePanelBtn');
 
 if(panel&&scrim&&toggle){
-  // Keep the drawer outside the board/workspace stacking contexts. The
-  // scene uses transforms for zoom, so a body-level portal is the most
-  // reliable way to keep mobile controls above the canvas on Android.
   document.body.append(scrim,panel);
-  panel.style.zIndex='1000';
-  scrim.style.zIndex='900';
-  scrim.style.pointerEvents='none';
+
+  Object.assign(scrim.style,{position:'fixed',inset:'0',zIndex:'2147483000',pointerEvents:'none'});
+  Object.assign(panel.style,{position:'fixed',right:'0',top:'0',bottom:'0',width:'min(88vw,340px)',maxWidth:'340px',height:'100dvh',display:'block',overflowY:'auto',zIndex:'2147483640',background:'#fff',pointerEvents:'none',visibility:'hidden',transform:'translateX(105%)'});
+
+  const sync=()=>{
+    const open=document.body.classList.contains('side-panel-open');
+    panel.style.pointerEvents=open?'auto':'none';
+    panel.style.visibility=open?'visible':'hidden';
+    panel.style.transform=open?'translateX(0)':'translateX(105%)';
+    scrim.hidden=!open;
+  };
+  sync();
+  new MutationObserver(sync).observe(document.body,{attributes:true,attributeFilter:['class']});
 
   document.addEventListener('pointerdown',event=>{
     if(!document.body.classList.contains('side-panel-open'))return;
@@ -18,6 +25,5 @@ if(panel&&scrim&&toggle){
     event.preventDefault();
     event.stopPropagation();
     document.body.classList.remove('side-panel-open');
-    scrim.hidden=true;
   },true);
 }
