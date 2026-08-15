@@ -1,25 +1,7 @@
 name: Browser Smoke TeacherBoard Next
 
 on:
-  push:
-    branches: [agent/reorganize-teacher-board]
-    paths:
-      - 'preview.html'
-      - 'css/next.css'
-      - 'src/**'
-      - 'tests/browser-smoke.mjs'
-      - '.github/workflows/browser-smoke.yml'
-  pull_request:
-    paths:
-      - 'preview.html'
-      - 'css/next.css'
-      - 'src/**'
-      - 'tests/browser-smoke.mjs'
-      - '.github/workflows/browser-smoke.yml'
-
-concurrency:
-  group: teacherboard-browser-smoke-${{ github.ref }}
-  cancel-in-progress: true
+  workflow_dispatch:
 
 jobs:
   browser-smoke:
