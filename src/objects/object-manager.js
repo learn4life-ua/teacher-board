@@ -15,17 +15,72 @@ export class ObjectManager {
 
   get objects() { return activePage(this.state).objects; }
 
-  addShape(shape, box) {
-    pushHistory(this.state);
-    const obj = {
+  createShape(shape, box, options = {}) {
+    return {
       id: uid('shape'), kind: 'shape', shape,
-      x: box.x, y: box.y, w: Math.max(40, box.w), h: Math.max(40, box.h),
-      rotation: 0, color: this.state.color, lineWidth: this.state.lineWidth
+      x: box.x, y: box.y,
+      w: Math.max(options.minW ?? 40, box.w),
+      h: Math.max(options.minH ?? 40, box.h),
+      rotation: options.rotation ?? 0,
+      color: options.color || this.state.color,
+      lineWidth: options.lineWidth || this.state.lineWidth
     };
+  }
+
+  addShape(shape, box, options = {}) {
+    pushHistory(this.state);
+    const obj = this.createShape(shape, box, options);
     this.objects.push(obj);
     this.state.selection = obj.id;
     this.changed();
     return obj;
+  }
+
+  addSegment(a, b, options = {}) {
+    return this.addSegments([{ a, b }], options)[0];
+  }
+
+  addSegments(segments, options = {}) {
+    if (!segments.length) return [];
+    pushHistory(this.state);
+    const created = segments.map(({ a, b }) => {
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const length = Math.max(8, Math.hypot(dx, dy));
+      const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+      const obj = this.createShape('segment', {
+        x: (a.x + b.x) / 2 - length / 2,
+        y: (a.y + b.y) / 2 - 10,
+        w: length,
+        h: 20
+      }, {
+        minW: 8,
+        minH: 20,
+        rotation: angle,
+        color: options.color,
+        lineWidth: options.lineWidth
+      });
+      this.objects.push(obj);
+      return obj;
+    });
+    this.state.selection = created.at(-1)?.id || null;
+    this.changed();
+    return created;
+  }
+
+  addCircle(center, radius, options = {}) {
+    const r = Math.max(12, radius);
+    return this.addShape('ellipse', {
+      x: center.x - r,
+      y: center.y - r,
+      w: r * 2,
+      h: r * 2
+    }, {
+      minW: 24,
+      minH: 24,
+      color: options.color,
+      lineWidth: options.lineWidth
+    });
   }
 
   selected() { return this.objects.find(o => o.id === this.state.selection) || null; }
@@ -118,7 +173,7 @@ export class ObjectManager {
       obj.y = clamp(this.drag.y + dy, -obj.h + 20, 880);
     } else if (this.drag.mode === 'resize') {
       obj.w = Math.max(40, this.drag.w + dx);
-      obj.h = Math.max(40, this.drag.h + dy);
+      obj.h = Math.max(20, this.drag.h + dy);
     } else if (this.drag.mode === 'rotate') {
       const rect = this.layer.getBoundingClientRect();
       const cx = rect.left + this.drag.center.x * scale;
