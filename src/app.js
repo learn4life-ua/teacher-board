@@ -5,6 +5,7 @@ import { Scene } from './core/scene.js';
 import { ObjectManager } from './objects/object-manager.js';
 import { SHAPE_LABELS } from './objects/shapes.js';
 import { FreehandDrawing } from './drawing/freehand.js';
+import { GeometryTools } from './instruments/geometry-tools.js';
 
 let state = loadState(createState());
 
@@ -14,6 +15,7 @@ const sceneEl = $('#scene');
 const viewport = $('#boardViewport');
 const canvas = $('#drawingCanvas');
 const objectLayer = $('#objectLayer');
+const instrumentLayer = $('#instrumentLayer');
 const zoomLabel = $('#zoomLabel');
 const pagesEl = $('#pages');
 const shapeMenu = $('#shapeMenu');
@@ -22,6 +24,7 @@ const autosaveState = $('#autosaveState');
 const scene = new Scene({ viewport, scene: sceneEl, zoomLabel, state });
 const objectManager = new ObjectManager({ state, layer: objectLayer, onChange: commit });
 const drawing = new FreehandDrawing({ state, canvas, scene, onChange: commit });
+const geometryTools = new GeometryTools({ state, layer: instrumentLayer, onChange: commit });
 
 let shapeGesture = null;
 
@@ -35,7 +38,7 @@ function commit() {
 function setTool(tool) {
   state.tool = tool;
   if (tool !== 'select') state.selection = null;
-  $$('.tool').forEach(b => b.classList.toggle('active', b.dataset.tool === tool));
+  $$('.tool[data-tool]').forEach(b => b.classList.toggle('active', b.dataset.tool === tool));
   sceneEl.dataset.tool = tool;
   objectManager.render();
   shapeMenu.hidden = true;
@@ -46,6 +49,7 @@ function renderAll() {
   sceneEl.dataset.background = activePage(state).background || 'clean';
   drawing.render();
   objectManager.render();
+  geometryTools.render();
   renderPages();
   $$('.background-btn').forEach(b => b.classList.toggle('selected', b.dataset.bg === activePage(state).background));
 }
@@ -92,7 +96,7 @@ function buildShapeMenu() {
 function bindShapeDrawing() {
   sceneEl.addEventListener('pointerdown', e => {
     if (!state.tool.startsWith('shape:')) return;
-    if (e.target.closest('.scene-object')) return;
+    if (e.target.closest('.scene-object,.geometry-tool')) return;
     e.preventDefault();
     const p = scene.pointFromEvent(e);
     shapeGesture = { start: p, end: p };
@@ -133,6 +137,10 @@ function updateShapePreview() {
 
 function bindUi() {
   $$('.tool[data-tool]').forEach(b => b.addEventListener('click', () => setTool(b.dataset.tool)));
+  $$('.instrument-btn').forEach(b => b.addEventListener('click', () => {
+    geometryTools.add(b.dataset.instrument);
+    setTool('select');
+  }));
   $('#shapeBtn').addEventListener('click', e => {
     e.stopPropagation();
     shapeMenu.hidden = !shapeMenu.hidden;
@@ -150,8 +158,8 @@ function bindUi() {
     const selected = objectManager.selected();
     if (selected) objectManager.updateSelected({ lineWidth: state.lineWidth }); else saveState(state);
   });
-  $('#zoomInBtn').addEventListener('click', () => { scene.setZoom(state.zoom + .1); saveState(state); });
-  $('#zoomOutBtn').addEventListener('click', () => { scene.setZoom(state.zoom - .1); saveState(state); });
+  $('#zoomInBtn').addEventListener('click', () => { scene.setZoom(state.zoom + .1); saveState(state); geometryTools.render(); });
+  $('#zoomOutBtn').addEventListener('click', () => { scene.setZoom(state.zoom - .1); saveState(state); geometryTools.render(); });
   $('#undoBtn').addEventListener('click', () => { if (undo(state)) commit(); });
   $('#redoBtn').addEventListener('click', () => { if (redo(state)) commit(); });
   $('#deleteBtn').addEventListener('click', () => objectManager.deleteSelected());
@@ -161,7 +169,7 @@ function bindUi() {
     commit();
   }));
   sceneEl.addEventListener('pointerdown', e => {
-    if (state.tool === 'select' && !e.target.closest('.scene-object')) objectManager.select(null);
+    if (state.tool === 'select' && !e.target.closest('.scene-object,.geometry-tool')) objectManager.select(null);
   });
   window.addEventListener('keydown', e => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); if (e.shiftKey ? redo(state) : undo(state)) commit(); }
