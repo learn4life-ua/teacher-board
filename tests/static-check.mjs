@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { graphSvg, evaluateExpression } from '../src/math/graph.js';
+import { shapeSvg } from '../src/objects/shapes.js';
 
 const root = process.cwd();
 const errors = [];
@@ -65,6 +66,12 @@ if(!/clipboardData/.test(app)||!/\.items/.test(app)||!/getAsFile/.test(app)) fai
 
 const shapes=exists('src/objects/shapes.js')?read('src/objects/shapes.js'):'';
 if(!/curtain\s*:\s*['"]Шторка['"]/.test(shapes)) fail('У shape registry відсутня редагована Шторка.');
+const axesA=shapeSvg({id:'axes-a',shape:'axes',lineWidth:4});
+const axesB=shapeSvg({id:'axes-b',shape:'axes',lineWidth:4});
+const markerA=axesA.match(/<marker id="([^"]+)"/)?.[1];
+const markerB=axesB.match(/<marker id="([^"]+)"/)?.[1];
+if(!markerA||!markerB||markerA===markerB) fail('Кожен axes object має мати власний SVG marker id.');
+if(!axesA.includes(`url(#${markerA})`)||!axesB.includes(`url(#${markerB})`)) fail('Axes marker-end має посилатись на marker саме свого об’єкта.');
 
 const drawing=exists('src/drawing/freehand.js')?read('src/drawing/freehand.js'):'';
 if(!/destination-out/.test(drawing)) fail('Гумка має стирати drawing canvas через destination-out, а не малювати білим.');
