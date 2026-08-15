@@ -1,6 +1,7 @@
 import process from 'node:process';
 import { createState } from '../src/core/state.js';
 import { normalizeStoredState } from '../src/core/storage.js';
+import { shapeSvg } from '../src/objects/shapes.js';
 
 const errors=[];
 const fail=message=>errors.push(message);
@@ -26,7 +27,10 @@ const data={
         {id:'remote-image',kind:'image',src:'https://example.com/image.png'},
         {id:'bad',kind:'unknown'},
         {id:'bad-shape',kind:'shape',shape:'inventedShape'},
-        {id:'shape1',kind:'shape',shape:'rect',lineWidth:999}
+        {id:'shape1',kind:'shape',shape:'rect',lineWidth:999},
+        {id:'legacy-n5',kind:'shape',shape:'number5',lineWidth:4},
+        {id:'legacy-n10',kind:'shape',shape:'number10',lineWidth:4},
+        {id:'legacy-blank',kind:'shape',shape:'numberBlank',lineWidth:4}
       ],
       instruments:[
         {id:'pr1',type:'protractor'},
@@ -61,6 +65,27 @@ else{
   if(!shape||shape.lineWidth!==40)fail(`Shape line width must clamp to 40, got ${shape?.lineWidth}.`);
   if(page.objects.some(o=>['i1','remote-image','bad','bad-shape'].includes(o.id)))fail('Invalid/remote image, unknown object or unsupported shape must be removed.');
 
+  const n5=page.objects.find(o=>o.id==='legacy-n5');
+  const n10=page.objects.find(o=>o.id==='legacy-n10');
+  const blankLine=page.objects.find(o=>o.id==='legacy-blank');
+  if(!n5||n5.shape!=='numberLine'||n5.numberMin!==-5||n5.numberMax!==5||n5.showLabels!==true)fail('Legacy number5 did not migrate to labeled −5…5 numberLine.');
+  if(!n10||n10.shape!=='numberLine'||n10.numberMin!==-10||n10.numberMax!==10||n10.showLabels!==true)fail('Legacy number10 did not migrate to labeled −10…10 numberLine.');
+  if(!blankLine||blankLine.shape!=='numberLine'||blankLine.numberMin!==-5||blankLine.numberMax!==5||blankLine.showLabels!==false)fail('Legacy numberBlank did not migrate to unlabeled numberLine.');
+
+  if(n5){
+    const svg=shapeSvg(n5);
+    if(!svg.includes('>-5</text>')||!svg.includes('>5</text>'))fail('Migrated number5 SVG must render −5 and 5 labels.');
+    if(!svg.includes('M96 50 L90 45'))fail('Number line must keep a single arrowhead toward +x.');
+  }
+  if(n10){
+    const svg=shapeSvg(n10);
+    if(!svg.includes('>-10</text>')||!svg.includes('>10</text>'))fail('Migrated number10 SVG must render −10 and 10 labels.');
+  }
+  if(blankLine){
+    const svg=shapeSvg(blankLine);
+    if(svg.includes('class="scale-label"'))fail('Migrated numberBlank must render tick marks without numeric labels.');
+  }
+
   const protractor=page.instruments.find(i=>i.id==='pr1');
   if(!protractor||protractor.angle!==60||protractor.w!==420||protractor.h!==220)fail('Protractor defaults were not restored.');
   const compass=page.instruments.find(i=>i.id==='c1');
@@ -76,4 +101,4 @@ if(errors.length){
   errors.forEach(error=>console.error(`- ${error}`));
   process.exit(1);
 }
-console.log('TeacherBoard storage check: OK (corrupt v2 data sanitizes to safe runtime state)');
+console.log('TeacherBoard storage check: OK (corrupt v2 + legacy number lines recover safely)');
