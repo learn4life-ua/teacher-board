@@ -1,6 +1,6 @@
 import process from 'node:process';
 import { createState } from '../src/core/state.js';
-import { normalizeStoredState } from '../src/core/storage.js';
+import { normalizeStoredState, saveState } from '../src/core/storage.js';
 import { shapeSvg } from '../src/objects/shapes.js';
 
 const errors=[];
@@ -96,9 +96,28 @@ else{
   if(!Array.isArray(blank.strokes)||!Array.isArray(blank.objects)||!Array.isArray(blank.instruments))fail('Malformed page must recover to arrays.');
 }
 
+const previousStorage=globalThis.localStorage;
+try{
+  let written='';
+  globalThis.localStorage={setItem:(key,value)=>{written=`${key}:${value}`;},getItem:()=>null,removeItem:()=>{}};
+  if(saveState(createState())!==true)fail('saveState must return true after successful localStorage write.');
+  if(!written.startsWith('teacherboard.v2:'))fail('saveState did not write teacherboard.v2.');
+
+  globalThis.localStorage={
+    setItem:()=>{const error=new Error('quota');error.name='QuotaExceededError';throw error;},
+    getItem:()=>null,removeItem:()=>{}
+  };
+  let quotaResult;
+  try{quotaResult=saveState(createState());}catch(error){fail(`saveState leaked quota exception: ${error.message}`);}
+  if(quotaResult!==false)fail(`saveState must return false on quota failure, got ${quotaResult}.`);
+}finally{
+  if(previousStorage===undefined)delete globalThis.localStorage;
+  else globalThis.localStorage=previousStorage;
+}
+
 if(errors.length){
   console.error(`TeacherBoard storage check: FAIL (${errors.length})`);
   errors.forEach(error=>console.error(`- ${error}`));
   process.exit(1);
 }
-console.log('TeacherBoard storage check: OK (corrupt v2 + legacy number lines recover safely)');
+console.log('TeacherBoard storage check: OK (corrupt data, legacy number lines, autosave quota handling)');
