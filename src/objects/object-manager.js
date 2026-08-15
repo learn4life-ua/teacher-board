@@ -1,5 +1,6 @@
 import { activePage, uid } from '../core/state.js';
 import { pushHistory } from '../core/history.js';
+import { sceneDeltaFromClient } from '../core/scene.js';
 import { shapeSvg } from './shapes.js';
 import { graphSvg, createGraphObject } from '../math/graph.js';
 import { textMarkup } from './text.js';
@@ -47,7 +48,8 @@ export class ObjectManager {
   pointerMove(e){
     if(!this.drag)return;
     const obj=this.objects.find(o=>o.id===this.drag.id);if(!obj||obj.locked)return;
-    const scale=this.state.zoom||1,dx=(e.clientX-this.drag.startX)/scale,dy=(e.clientY-this.drag.startY)/scale;
+    const scale=this.state.zoom||1;
+    const delta=sceneDeltaFromClient(e.clientX-this.drag.startX,e.clientY-this.drag.startY,scale),dx=delta.x,dy=delta.y;
     if(this.drag.mode==='move'){
       obj.x=clamp(this.drag.x+dx,-obj.w+20,1580);obj.y=clamp(this.drag.y+dy,-obj.h+20,880);
     }else if(this.drag.mode==='resize'){
