@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import process from 'node:process';
 import { normalizeZoom, scenePointFromClient, sceneDeltaFromClient, sceneDeltaToLocalAxes, MIN_ZOOM, MAX_ZOOM, ZOOM_STEP } from '../src/core/scene.js';
+import { resizeObjectDimensions } from '../src/objects/object-manager.js';
 
 const errors=[];
 const fail=message=>errors.push(message);
@@ -39,6 +40,20 @@ if(!near(local45.x,80)||!near(local45.y,0,1e-8)) fail('45° local-axis resize tr
 const cross45=sceneDeltaToLocalAxes(-50*Math.sin(a),50*Math.cos(a),45);
 if(!near(cross45.x,0,1e-8)||!near(cross45.y,50,1e-8)) fail('Local perpendicular resize axis is incorrect.');
 
+const imageCases=[
+  {rotation:0,dx:120,dy:10},
+  {rotation:45,dx:120*Math.cos(a),dy:120*Math.sin(a)},
+  {rotation:90,dx:0,dy:120},
+  {rotation:45,dx:-90*Math.sin(a),dy:90*Math.cos(a)}
+];
+for(const test of imageCases){
+  const box=resizeObjectDimensions({kind:'image',startW:400,startH:300,aspect:4/3,...test});
+  if(!near(box.w/box.h,4/3,1e-8)) fail(`Image aspect ratio drifted after ${test.rotation}° resize: ${box.w}×${box.h}.`);
+  if(box.w<80||box.h<60) fail(`Image resize broke minimum dimensions after ${test.rotation}°.`);
+}
+const tinyImage=resizeObjectDimensions({kind:'image',startW:100,startH:75,aspect:4/3,dx:-1000,dy:-1000,rotation:0});
+if(!near(tinyImage.w/tinyImage.h,4/3,1e-8)||tinyImage.w<80||tinyImage.h<60)fail('Image minimum resize must preserve aspect ratio.');
+
 const app=fs.readFileSync('src/app.js','utf8');
 if(!/setZoom\(state\.zoom\+\.25\)/.test(app)||!/setZoom\(state\.zoom-\.25\)/.test(app)){
   fail('Toolbar zoom buttons must step by 25%.');
@@ -49,6 +64,7 @@ if(!objects.includes('sceneDeltaFromClient')) fail('Object drag must use the sha
 if(!geometry.includes('sceneDeltaFromClient')) fail('Geometry drag must use the shared scene delta helper.');
 if(!objects.includes('sceneDeltaToLocalAxes')) fail('Rotated object resize must use local axes.');
 if(!geometry.includes('sceneDeltaToLocalAxes')) fail('Rotated geometry resize must use local axes.');
+if(!objects.includes('resizeObjectDimensions')) fail('Object resize must use the shared deterministic resize helper.');
 
 const css=fs.readFileSync('css/next.css','utf8');
 if(!/\.board-viewport\{[^}]*width:calc\(1600px \* var\(--scene-zoom,1\)\)[^}]*height:calc\(900px \* var\(--scene-zoom,1\)\)/.test(css)){
@@ -66,4 +82,4 @@ if(errors.length){
   errors.forEach(error=>console.error(`- ${error}`));
   process.exit(1);
 }
-console.log('TeacherBoard zoom check: OK (50–200%, 25% presets, shared logical scene, rotated resize axes)');
+console.log('TeacherBoard zoom check: OK (zoom presets, shared scene, rotated resize, image aspect ratio)');
