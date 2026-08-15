@@ -8,13 +8,16 @@ import { createImageObject, imageMarkup } from './images.js';
 
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 
-export function resizeObjectDimensions({kind,startW,startH,dx,dy,rotation=0,aspect=startW/Math.max(1,startH)}){
+export function resizeObjectDimensions({kind,shape,startW,startH,dx,dy,rotation=0,aspect=startW/Math.max(1,startH)}){
   const local=sceneDeltaToLocalAxes(dx,dy,rotation),rdx=local.x,rdy=local.y;
-  const minW=kind==='graph'?320:kind==='text'?120:kind==='image'?80:40;
-  const minH=kind==='graph'?240:kind==='text'?50:kind==='image'?60:20;
+  const directed=kind==='shape'&&['segment','arrow'].includes(shape);
+  const circle=kind==='shape'&&shape==='circle';
+  const minW=kind==='graph'?320:kind==='text'?120:kind==='image'?80:directed?8:40;
+  const minH=kind==='graph'?240:kind==='text'?50:kind==='image'?60:directed?20:circle?40:20;
+  if(directed)return {w:Math.max(minW,startW+rdx),h:startH,local};
   let w=Math.max(minW,startW+rdx),h=Math.max(minH,startH+rdy);
-  if(kind==='image'){
-    const ratio=Math.max(.05,Number(aspect)||1);
+  if(kind==='image'||circle){
+    const ratio=circle?1:Math.max(.05,Number(aspect)||1);
     if(Math.abs(rdx)>=Math.abs(rdy)){
       w=Math.max(minW,startW+rdx);
       h=Math.max(minH,w/ratio);
@@ -39,7 +42,7 @@ export class ObjectManager {
   addImage(src, naturalWidth=800, naturalHeight=600) { pushHistory(this.state); const obj=createImageObject(src,naturalWidth,naturalHeight); this.objects.push(obj); this.state.selection=obj.id; this.changed(); return obj; }
   addSegment(a,b,options={}) { return this.addSegments([{a,b}],options)[0]; }
   addSegments(segments,options={}) { if(!segments.length)return[]; pushHistory(this.state); const created=segments.map(({a,b})=>{ const dx=b.x-a.x,dy=b.y-a.y,length=Math.max(8,Math.hypot(dx,dy)),angle=Math.atan2(dy,dx)*180/Math.PI; const obj=this.createShape('segment',{x:(a.x+b.x)/2-length/2,y:(a.y+b.y)/2-10,w:length,h:20},{minW:8,minH:20,rotation:angle,color:options.color,lineWidth:options.lineWidth}); this.objects.push(obj); return obj; }); this.state.selection=created.at(-1)?.id||null; this.changed(); return created; }
-  addCircle(center,radius,options={}) { const r=Math.max(12,radius); return this.addShape('ellipse',{x:center.x-r,y:center.y-r,w:r*2,h:r*2},{minW:24,minH:24,color:options.color,lineWidth:options.lineWidth}); }
+  addCircle(center,radius,options={}) { const r=Math.max(12,radius); return this.addShape('circle',{x:center.x-r,y:center.y-r,w:r*2,h:r*2},{minW:24,minH:24,color:options.color,lineWidth:options.lineWidth}); }
   addArc(center,radius,startDeg,endDeg,options={}) { pushHistory(this.state); const r=Math.max(12,radius); const obj={ id:uid('arc'),kind:'shape',shape:'circleArc',x:center.x-r,y:center.y-r,w:r*2,h:r*2,rotation:Number(options.rotation)||0,color:options.color||this.state.color,lineWidth:options.lineWidth||this.state.lineWidth,startDeg,endDeg }; this.objects.push(obj); this.state.selection=obj.id; this.changed(); return obj; }
 
   selected(){return this.objects.find(o=>o.id===this.state.selection)||null;}
@@ -82,7 +85,7 @@ export class ObjectManager {
     if(this.drag.mode==='move'){
       obj.x=clamp(this.drag.x+dx,-obj.w+20,1580);obj.y=clamp(this.drag.y+dy,-obj.h+20,880);
     }else if(this.drag.mode==='resize'){
-      const resized=resizeObjectDimensions({kind:obj.kind,startW:this.drag.w,startH:this.drag.h,dx,dy,rotation:this.drag.rotation,aspect:this.drag.aspect});
+      const resized=resizeObjectDimensions({kind:obj.kind,shape:obj.shape,startW:this.drag.w,startH:this.drag.h,dx,dy,rotation:this.drag.rotation,aspect:this.drag.aspect});
       obj.w=resized.w;obj.h=resized.h;
       if(obj.kind==='text')obj.fontSize=clamp(Math.round(32*obj.h/100),14,96);
     }else if(this.drag.mode==='rotate'){
