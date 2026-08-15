@@ -45,7 +45,7 @@ export class ObjectManager {
   selected(){return this.objects.find(o=>o.id===this.state.selection)||null;}
   select(id){const obj=this.objects.find(o=>o.id===id);this.state.selection=obj?.locked?null:(id||null);this.render();}
   deleteSelected(){const id=this.state.selection;if(!id)return;const i=this.objects.findIndex(o=>o.id===id);if(i<0||this.objects[i].locked)return;pushHistory(this.state);this.objects.splice(i,1);this.state.selection=null;this.changed();}
-  updateSelected(patch){const obj=this.selected();if(!obj||obj.locked)return;pushHistory(this.state);Object.assign(obj,patch);this.changed();}
+  updateSelected(patch){const obj=this.selected();if(!obj||obj.locked)return false;const entries=Object.entries(patch||{});if(!entries.some(([key,value])=>obj[key]!==value))return false;pushHistory(this.state);Object.assign(obj,patch);this.changed();return true;}
   requestEdit(obj){if(!obj||!['text','graph'].includes(obj.kind))return;this.select(obj.id);this.layer.dispatchEvent(new CustomEvent('objectedit',{detail:{id:obj.id,kind:obj.kind}}));}
 
   render(){this.layer.innerHTML='';for(const obj of this.objects)this.layer.appendChild(this.createElement(obj));}
