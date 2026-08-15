@@ -5,13 +5,14 @@ const BACKGROUNDS = new Set(['clean','grid','lines','coords']);
 const STROKE_TOOLS = new Set(['pen','marker','eraser']);
 const OBJECT_KINDS = new Set(['shape','graph','text','image']);
 const INSTRUMENT_TYPES = new Set(['ruler','protractor','compass']);
+const TOOLS = new Set(['select','pen','marker','eraser']);
 
 function id(prefix = 'm') {
   return crypto.randomUUID?.() || `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
 const finite=(value,fallback=0)=>Number.isFinite(Number(value))?Number(value):fallback;
-const clamp=(value,min,max)=>Math.max(min,Math.min(max,finite(value,min)));
+const clamp=(value,min,max,fallback=min)=>Math.max(min,Math.min(max,finite(value,fallback)));
 
 function normalizeObject(obj) {
   if (!obj || typeof obj !== 'object' || !OBJECT_KINDS.has(obj.kind)) return null;
@@ -26,7 +27,7 @@ function normalizeObject(obj) {
   if (copy.kind === 'shape') {
     if (typeof copy.shape !== 'string' || !copy.shape) return null;
     copy.color = typeof copy.color === 'string' ? copy.color : '#245d55';
-    copy.lineWidth = clamp(copy.lineWidth,1,40);
+    copy.lineWidth = clamp(copy.lineWidth,1,40,4);
   } else if (copy.kind === 'graph') {
     copy.expression = typeof copy.expression === 'string' && copy.expression.trim() ? copy.expression : 'x';
     copy.color = typeof copy.color === 'string' ? copy.color : '#245d55';
@@ -38,7 +39,7 @@ function normalizeObject(obj) {
   } else if (copy.kind === 'text') {
     copy.text = String(copy.text ?? 'Текст');
     copy.color = typeof copy.color === 'string' ? copy.color : '#245d55';
-    copy.fontSize = clamp(copy.fontSize,12,160);
+    copy.fontSize = clamp(copy.fontSize,12,160,32);
   } else if (copy.kind === 'image') {
     if (typeof copy.src !== 'string' || !copy.src) return null;
     copy.locked = Boolean(copy.locked || copy.legacyRaster);
@@ -60,7 +61,7 @@ function normalizeStroke(stroke){
     id:String(stroke.id||id('stroke')),
     tool:stroke.tool,
     color:typeof stroke.color==='string'?stroke.color:'#245d55',
-    width:clamp(stroke.width,1,40),
+    width:clamp(stroke.width,1,40,4),
     points
   };
 }
@@ -69,9 +70,9 @@ function normalizeInstrument(item){
   if(!item||typeof item!=='object'||!INSTRUMENT_TYPES.has(item.type))return null;
   const base={...item,id:String(item.id||id(item.type)),x:finite(item.x,520),y:finite(item.y,290),rotation:finite(item.rotation,0)};
   if(item.type==='ruler')return {...base,w:Math.max(260,finite(item.w,520)),h:Math.max(72,finite(item.h,96))};
-  if(item.type==='protractor')return {...base,w:Math.max(180,finite(item.w,420)),h:Math.max(140,finite(item.h,220)),angle:clamp(item.angle,0,180)};
+  if(item.type==='protractor')return {...base,w:Math.max(180,finite(item.w,420)),h:Math.max(140,finite(item.h,220)),angle:clamp(item.angle,0,180,60)};
   const w=Math.max(180,finite(item.w,260)),h=Math.max(140,finite(item.h,300)),maxRadius=Math.max(45,Math.min(w,h)*.45);
-  return {...base,w,h,radius:clamp(item.radius,30,maxRadius),mode:item.mode==='arc'?'arc':'circle',arcStart:finite(item.arcStart,0),arcEnd:finite(item.arcEnd,180)};
+  return {...base,w,h,radius:clamp(item.radius,30,maxRadius,92),mode:item.mode==='arc'?'arc':'circle',arcStart:finite(item.arcStart,0),arcEnd:finite(item.arcEnd,180)};
 }
 
 function normalizePage(page,index){
@@ -90,11 +91,13 @@ export function normalizeStoredState(data,fallback){
   if(!data||typeof data!=='object'||!Array.isArray(data.pages)||!data.pages.length)return null;
   const pages=data.pages.map(normalizePage);
   const activePage=Math.max(0,Math.min(Math.trunc(finite(data.activePage,0)),pages.length-1));
+  const rawTool=typeof data.tool==='string'?data.tool:'select';
+  const tool=TOOLS.has(rawTool)?rawTool:'select';
   return {
     ...fallback,
-    tool:typeof data.tool==='string'?data.tool:(fallback.tool||'select'),
+    tool,
     color:typeof data.color==='string'?data.color:(fallback.color||'#245d55'),
-    lineWidth:clamp(data.lineWidth,1,40),
+    lineWidth:clamp(data.lineWidth,1,40,finite(fallback.lineWidth,4)),
     zoom:finite(data.zoom,1),
     activePage,
     pages,
