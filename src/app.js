@@ -52,6 +52,7 @@ function renderAll() {
   geometryTools.render();
   renderPages();
   syncGraphPanel();
+  syncTextPanel();
   $$('.background-btn').forEach(b => b.classList.toggle('selected', b.dataset.bg === activePage(state).background));
 }
 
@@ -80,9 +81,7 @@ function addPage() {
 }
 
 function buildShapeMenu() {
-  shapeMenu.innerHTML = Object.entries(SHAPE_LABELS)
-    .map(([key, label]) => `<button type="button" data-shape="${key}">${label}</button>`)
-    .join('');
+  shapeMenu.innerHTML = Object.entries(SHAPE_LABELS).map(([key, label]) => `<button type="button" data-shape="${key}">${label}</button>`).join('');
   shapeMenu.addEventListener('click', e => {
     const b = e.target.closest('[data-shape]');
     if (!b) return;
@@ -103,21 +102,17 @@ function bindShapeDrawing() {
     shapeGesture = { start: p, end: p };
     updateShapePreview();
   });
-
   sceneEl.addEventListener('pointermove', e => {
     if (!shapeGesture) return;
     shapeGesture.end = scene.pointFromEvent(e);
     updateShapePreview();
   });
-
   window.addEventListener('pointerup', () => {
     if (!shapeGesture) return;
     const { start, end } = shapeGesture;
     const type = state.tool.split(':')[1];
-    const x = Math.min(start.x, end.x);
-    const y = Math.min(start.y, end.y);
-    const w = Math.abs(end.x - start.x);
-    const h = Math.abs(end.y - start.y);
+    const x = Math.min(start.x, end.x), y = Math.min(start.y, end.y);
+    const w = Math.abs(end.x - start.x), h = Math.abs(end.y - start.y);
     $('#shapePreview').hidden = true;
     shapeGesture = null;
     const obj = objectManager.addShape(type, { x, y, w, h });
@@ -175,12 +170,32 @@ function bindGraphPanel() {
   });
 }
 
+function syncTextPanel() {
+  const obj = objectManager.selected();
+  const isText = obj?.kind === 'text';
+  $('#updateTextBtn').disabled = !isText;
+  if (isText && !document.activeElement?.closest?.('.text-panel')) $('#textValue').value = obj.text || '';
+}
+
+function bindTextPanel() {
+  $('#textBtn').addEventListener('click', () => $('#textValue').focus());
+  $('#addTextBtn').addEventListener('click', () => {
+    const value = $('#textValue').value.trim();
+    if (!value) return;
+    const obj = objectManager.addText(value);
+    setTool('select');
+    objectManager.select(obj.id);
+  });
+  $('#updateTextBtn').addEventListener('click', () => {
+    const obj = objectManager.selected();
+    if (!obj || obj.kind !== 'text') return;
+    objectManager.updateSelected({ text: $('#textValue').value });
+  });
+}
+
 function bindUi() {
   $$('.tool[data-tool]').forEach(b => b.addEventListener('click', () => setTool(b.dataset.tool)));
-  $$('.instrument-btn').forEach(b => b.addEventListener('click', () => {
-    geometryTools.add(b.dataset.instrument);
-    setTool('select');
-  }));
+  $$('.instrument-btn').forEach(b => b.addEventListener('click', () => { geometryTools.add(b.dataset.instrument); setTool('select'); }));
   $('#shapeBtn').addEventListener('click', e => { e.stopPropagation(); shapeMenu.hidden = !shapeMenu.hidden; });
   document.addEventListener('click', e => {
     if (!e.target.closest('#shapeMenu') && !e.target.closest('#shapeBtn')) shapeMenu.hidden = true;
@@ -193,7 +208,7 @@ function bindUi() {
   $('#lineWidth').addEventListener('change', e => {
     state.lineWidth = Number(e.target.value);
     const selected = objectManager.selected();
-    if (selected && selected.kind !== 'graph') objectManager.updateSelected({ lineWidth: state.lineWidth }); else saveState(state);
+    if (selected && !['graph','text'].includes(selected.kind)) objectManager.updateSelected({ lineWidth: state.lineWidth }); else saveState(state);
   });
   $('#zoomInBtn').addEventListener('click', () => { scene.setZoom(state.zoom + .1); saveState(state); geometryTools.render(); });
   $('#zoomOutBtn').addEventListener('click', () => { scene.setZoom(state.zoom - .1); saveState(state); geometryTools.render(); });
@@ -215,6 +230,7 @@ function bindUi() {
 buildShapeMenu();
 bindShapeDrawing();
 bindGraphPanel();
+bindTextPanel();
 bindUi();
 setTool(state.tool.startsWith('shape:') ? 'select' : state.tool);
 renderAll();
