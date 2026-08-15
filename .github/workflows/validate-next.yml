@@ -54,6 +54,9 @@ jobs:
       - name: Check PNG export contract
         run: node tests/export-contract-check.mjs
 
+      - name: Check text rendering safety
+        run: node tests/text-safety-check.mjs
+
       - name: Check object edit panel contract
         shell: bash
         run: |
