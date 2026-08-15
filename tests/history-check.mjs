@@ -1,6 +1,6 @@
 import process from 'node:process';
 import { createState, createBlankPage, activePage } from '../src/core/state.js';
-import { pushHistory, undo, redo, resetHistory } from '../src/core/history.js';
+import { pushHistory, undo, redo, resetHistory, MAX_HISTORY_SNAPSHOTS, MAX_HISTORY_CHARS } from '../src/core/history.js';
 
 const errors=[];
 const fail=message=>errors.push(message);
@@ -37,11 +37,22 @@ if(activePage(state).id===state.pages[1].id) fail('Page identities were mixed by
 
 resetHistory(state);
 for(let i=0;i<60;i++) pushHistory(state);
-if(state.history.undo.length!==50) fail(`Undo history limit must be 50, got ${state.history.undo.length}.`);
+if(state.history.undo.length!==MAX_HISTORY_SNAPSHOTS) fail(`Undo history limit must be ${MAX_HISTORY_SNAPSHOTS}, got ${state.history.undo.length}.`);
+
+// Image-heavy pages can make every JSON snapshot several megabytes. The stack
+// must adapt to its total character budget instead of blindly keeping 50 copies.
+resetHistory(state);
+state.activePage=0;
+activePage(state).objects=[{id:'heavy',kind:'text',text:'x'.repeat(4_000_000),x:0,y:0,w:100,h:50}];
+for(let i=0;i<5;i++) pushHistory(state);
+const historyChars=state.history.undo.reduce((sum,item)=>sum+item.length,0);
+if(state.history.undo.length<1) fail('Heavy history must preserve at least one undo snapshot.');
+if(state.history.undo.length>=5) fail('Heavy history did not trim old snapshots.');
+if(state.history.undo.length>1&&historyChars>MAX_HISTORY_CHARS) fail(`Heavy history exceeded memory budget: ${historyChars} chars.`);
 
 if(errors.length){
   console.error(`TeacherBoard history check: FAIL (${errors.length})`);
   errors.forEach(error=>console.error(`- ${error}`));
   process.exit(1);
 }
-console.log('TeacherBoard history check: OK (clear/undo/redo/page isolation/history limit)');
+console.log('TeacherBoard history check: OK (clear/undo/redo/page isolation/count + memory budget)');
