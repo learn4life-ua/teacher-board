@@ -51,6 +51,7 @@ else {
     if (!re.test(html)) fail(`preview.html: відсутній #${id}`);
   }
   if (!/type=["']module["'][^>]+src=["']src\/app\.js["']/.test(html) && !/src=["']src\/app\.js["'][^>]+type=["']module["']/.test(html)) fail('preview.html: src/app.js має бути підключений як ES module.');
+  if (!/href=["']css\/touch\.css["']/.test(html)) fail('preview.html: не підключено touch-safe stylesheet.');
   if (!/src=["']src\/core\/export-bind\.js["']/.test(html)) fail('preview.html: не підключено PNG export binder.');
   if (!/src=["']src\/tools\/laser\.js["']/.test(html)) fail('preview.html: не підключено laser module.');
   if (!/src=["']src\/ui\/mobile-drawer\.js["']/.test(html)) fail('preview.html: не підключено touch-safe mobile drawer module.');
@@ -59,6 +60,7 @@ else {
 
 const app=exists('src/app.js')?read('src/app.js'):'';
 if(!/renamePageBtn/.test(app)||!/deletePageBtn/.test(app)) fail('Page management controls не підключені в src/app.js.');
+if(!/clipboardData/.test(app)||!/\.items/.test(app)||!/getAsFile/.test(app)) fail('Paste зображень має підтримувати clipboardData.items/getAsFile, а не лише files.');
 
 const shapes=exists('src/objects/shapes.js')?read('src/objects/shapes.js'):'';
 if(!/curtain\s*:\s*['"]Шторка['"]/.test(shapes)) fail('У shape registry відсутня редагована Шторка.');
@@ -66,6 +68,12 @@ if(!/curtain\s*:\s*['"]Шторка['"]/.test(shapes)) fail('У shape registry �
 const drawing=exists('src/drawing/freehand.js')?read('src/drawing/freehand.js'):'';
 if(!/destination-out/.test(drawing)) fail('Гумка має стирати drawing canvas через destination-out, а не малювати білим.');
 if(/strokeStyle\s*=\s*[^;]*#ffffff/.test(drawing)) fail('Гумка не повинна використовувати білий strokeStyle — це ламає grid/coords backgrounds.');
+
+const objectManager=exists('src/objects/object-manager.js')?read('src/objects/object-manager.js'):'';
+if(!/pointercancel/.test(objectManager)||!/blur/.test(objectManager)) fail('Object drag має завершуватись на pointercancel і blur.');
+
+const touch=exists('css/touch.css')?read('css/touch.css'):'';
+if(!/touch-action\s*:\s*none/.test(touch)) fail('Touch stylesheet має блокувати browser pan/zoom на редагованих об’єктах.');
 
 const laser=exists('src/tools/laser.js')?read('src/tools/laser.js'):'';
 if(!/pointerdown/.test(laser)||!/pointermove/.test(laser)||!/pointerup/.test(laser)) fail('Laser module має обробляти pointerdown/pointermove/pointerup.');
