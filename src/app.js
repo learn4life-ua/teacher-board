@@ -51,6 +51,7 @@ function renderAll() {
   objectManager.render();
   geometryTools.render();
   renderPages();
+  syncGraphPanel();
   $$('.background-btn').forEach(b => b.classList.toggle('selected', b.dataset.bg === activePage(state).background));
 }
 
@@ -135,16 +136,52 @@ function updateShapePreview() {
   p.style.height = `${Math.abs(end.y - start.y)}px`;
 }
 
+function graphValues() {
+  const xMin = Number($('#graphXMin').value), xMax = Number($('#graphXMax').value);
+  const yMin = Number($('#graphYMin').value), yMax = Number($('#graphYMax').value);
+  const majorStep = Number($('#graphStep').value);
+  if (!(xMin < xMax) || !(yMin < yMax) || !(majorStep > 0)) return null;
+  return { expression: $('#graphExpression').value.trim() || 'x', xMin, xMax, yMin, yMax, majorStep };
+}
+
+function syncGraphPanel() {
+  const obj = objectManager.selected();
+  const isGraph = obj?.kind === 'graph';
+  $('#updateGraphBtn').disabled = !isGraph;
+  if (!isGraph || document.activeElement?.closest?.('.graph-panel')) return;
+  $('#graphExpression').value = obj.expression || 'x';
+  $('#graphXMin').value = obj.xMin;
+  $('#graphXMax').value = obj.xMax;
+  $('#graphYMin').value = obj.yMin;
+  $('#graphYMax').value = obj.yMax;
+  $('#graphStep').value = obj.majorStep || 1;
+}
+
+function bindGraphPanel() {
+  $('#addGraphBtn').addEventListener('click', () => {
+    const values = graphValues();
+    if (!values) return alert('Перевірте межі осей і крок шкали.');
+    const graph = objectManager.addGraph(values.expression);
+    Object.assign(graph, values);
+    setTool('select');
+    objectManager.select(graph.id);
+    commit();
+  });
+  $('#updateGraphBtn').addEventListener('click', () => {
+    const obj = objectManager.selected();
+    const values = graphValues();
+    if (!obj || obj.kind !== 'graph' || !values) return;
+    objectManager.updateSelected(values);
+  });
+}
+
 function bindUi() {
   $$('.tool[data-tool]').forEach(b => b.addEventListener('click', () => setTool(b.dataset.tool)));
   $$('.instrument-btn').forEach(b => b.addEventListener('click', () => {
     geometryTools.add(b.dataset.instrument);
     setTool('select');
   }));
-  $('#shapeBtn').addEventListener('click', e => {
-    e.stopPropagation();
-    shapeMenu.hidden = !shapeMenu.hidden;
-  });
+  $('#shapeBtn').addEventListener('click', e => { e.stopPropagation(); shapeMenu.hidden = !shapeMenu.hidden; });
   document.addEventListener('click', e => {
     if (!e.target.closest('#shapeMenu') && !e.target.closest('#shapeBtn')) shapeMenu.hidden = true;
   });
@@ -156,7 +193,7 @@ function bindUi() {
   $('#lineWidth').addEventListener('change', e => {
     state.lineWidth = Number(e.target.value);
     const selected = objectManager.selected();
-    if (selected) objectManager.updateSelected({ lineWidth: state.lineWidth }); else saveState(state);
+    if (selected && selected.kind !== 'graph') objectManager.updateSelected({ lineWidth: state.lineWidth }); else saveState(state);
   });
   $('#zoomInBtn').addEventListener('click', () => { scene.setZoom(state.zoom + .1); saveState(state); geometryTools.render(); });
   $('#zoomOutBtn').addEventListener('click', () => { scene.setZoom(state.zoom - .1); saveState(state); geometryTools.render(); });
@@ -164,22 +201,20 @@ function bindUi() {
   $('#redoBtn').addEventListener('click', () => { if (redo(state)) commit(); });
   $('#deleteBtn').addEventListener('click', () => objectManager.deleteSelected());
   $('#addPageBtn').addEventListener('click', addPage);
-  $$('.background-btn').forEach(b => b.addEventListener('click', () => {
-    activePage(state).background = b.dataset.bg;
-    commit();
-  }));
+  $$('.background-btn').forEach(b => b.addEventListener('click', () => { activePage(state).background = b.dataset.bg; commit(); }));
   sceneEl.addEventListener('pointerdown', e => {
     if (state.tool === 'select' && !e.target.closest('.scene-object,.geometry-tool')) objectManager.select(null);
   });
   window.addEventListener('keydown', e => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); if (e.shiftKey ? redo(state) : undo(state)) commit(); }
-    if ((e.key === 'Delete' || e.key === 'Backspace') && state.selection) { e.preventDefault(); objectManager.deleteSelected(); }
+    if ((e.key === 'Delete' || e.key === 'Backspace') && state.selection && !e.target.closest('input,textarea')) { e.preventDefault(); objectManager.deleteSelected(); }
     if (e.key === 'Escape') setTool('select');
   });
 }
 
 buildShapeMenu();
 bindShapeDrawing();
+bindGraphPanel();
 bindUi();
 setTool(state.tool.startsWith('shape:') ? 'select' : state.tool);
 renderAll();
