@@ -2,6 +2,7 @@ import { uid } from '../core/state.js';
 
 const MAX_SOURCE_DIMENSION = 1600;
 const TARGET_DATA_URL_LENGTH = 1_250_000;
+const SMALL_FILE_BYTES = 900_000;
 
 export function createImageObject(src, naturalWidth = 800, naturalHeight = 600) {
   const maxW = 720, maxH = 520;
@@ -40,37 +41,54 @@ function loadImage(src) {
 
 function webpDataUrl(canvas, quality) {
   const value = canvas.toDataURL('image/webp', quality);
-  return value.startsWith('data:image/webp') ? value : canvas.toDataURL('image/jpeg', quality);
+  return value.startsWith('data:image/webp') ? value : canvas.toDataURL('image/png');
 }
 
-export async function fileToDataUrl(file) {
-  const original = await fileReaderDataUrl(file);
-  const img = await loadImage(original);
+async function optimizeDecodedImage(img) {
   const naturalWidth = img.naturalWidth || 1;
   const naturalHeight = img.naturalHeight || 1;
   const scale = Math.min(1, MAX_SOURCE_DIMENSION / Math.max(naturalWidth, naturalHeight));
   const width = Math.max(1, Math.round(naturalWidth * scale));
   const height = Math.max(1, Math.round(naturalHeight * scale));
-
-  // Small images are already efficient enough and keeping them untouched preserves fidelity.
-  if (scale === 1 && original.length <= TARGET_DATA_URL_LENGTH) return original;
-
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext('2d', { alpha: true });
-  if (!ctx) return original;
+  if (!ctx) throw new Error('Canvas недоступний');
   ctx.drawImage(img, 0, 0, width, height);
 
   let quality = 0.88;
   let optimized = webpDataUrl(canvas, quality);
-  while (optimized.length > TARGET_DATA_URL_LENGTH && quality > 0.54) {
+  while (optimized.startsWith('data:image/webp') && optimized.length > TARGET_DATA_URL_LENGTH && quality > 0.54) {
     quality -= 0.08;
     optimized = webpDataUrl(canvas, quality);
   }
+  return {optimized,scale};
+}
 
-  // Never replace a compact original with a larger encoded copy.
-  return optimized.length < original.length ? optimized : original;
+export async function fileToDataUrl(file) {
+  if (!file) throw new Error('Файл не вибрано');
+
+  // Keep genuinely small files untouched: this preserves PNG/WebP transparency and avoids recompression.
+  if ((Number(file.size) || 0) <= SMALL_FILE_BYTES) {
+    const original = await fileReaderDataUrl(file);
+    const img = await loadImage(original);
+    const largest = Math.max(img.naturalWidth || 1, img.naturalHeight || 1);
+    if (largest <= MAX_SOURCE_DIMENSION && original.length <= TARGET_DATA_URL_LENGTH) return original;
+    const {optimized} = await optimizeDecodedImage(img);
+    return optimized.length < original.length ? optimized : original;
+  }
+
+  // Large camera photos/screenshots are decoded from a Blob URL first. This avoids creating
+  // a second multi-megabyte Base64 copy in memory before the image has been resized.
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const img = await loadImage(objectUrl);
+    const {optimized} = await optimizeDecodedImage(img);
+    return optimized;
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
 }
 
 export function readImageSize(src) {
