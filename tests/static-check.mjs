@@ -40,7 +40,7 @@ else {
     'scene','boardViewport','drawingCanvas','objectLayer','instrumentLayer',
     'shapeMenu','shapeBtn','textBtn','imageBtn','imageInput',
     'undoBtn','redoBtn','deleteBtn','zoomInBtn','zoomOutBtn','zoomLabel',
-    'pages','addPageBtn','autosaveState','sidePanel','panelToggleBtn','panelBackdrop',
+    'pages','addPageBtn','autosaveState','sidePanel','mobilePanelBtn','closeSidePanelBtn','panelScrim',
     'textValue','addTextBtn','updateTextBtn',
     'graphExpression','graphXMin','graphXMax','graphYMin','graphYMax','graphStep','addGraphBtn','updateGraphBtn'
   ];
