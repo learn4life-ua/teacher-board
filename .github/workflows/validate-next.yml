@@ -121,3 +121,22 @@ jobs:
           grep -q 'URL.createObjectURL' src/objects/images.js
           grep -q 'URL.revokeObjectURL' src/objects/images.js
           grep -q 'finally' src/objects/images.js
+
+      - name: Check teaching interaction contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q "ctx.globalAlpha = isMarker ? 0.24 : 1" src/drawing/freehand.js
+          grep -q "setRangeText(value,start,end,'end')" src/app.js
+          grep -q 'historyPushed:false' src/objects/object-manager.js
+          grep -q 'historyPushed:false' src/instruments/geometry-tools.js
+          grep -q 'ensureDragHistory' src/objects/object-manager.js
+          grep -q 'ensureDragHistory' src/instruments/geometry-tools.js
+          if grep -Eq 'pointerDownObject\([^)]*\).*pushHistory' src/objects/object-manager.js; then
+            echo 'Object selection must not create an empty undo snapshot.'
+            exit 1
+          fi
+          if grep -Eq 'pointerDown\([^)]*\).*pushHistory' src/instruments/geometry-tools.js; then
+            echo 'Geometry tap must not create an empty undo snapshot.'
+            exit 1
+          fi
