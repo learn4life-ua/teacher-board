@@ -83,7 +83,7 @@ async function runCase(name, contextOptions = {}) {
     console.log(`[${name}] geometry constructions ok`);
 
     const beforeCurtain = await page.locator('.scene-object').count();
-    await drawShape(page, 'curtain', { x: 610, y: 160 }, { x: 850, y: 360 });
+    await drawShape(page, 'curtain', { x: 1220, y: 690 }, { x: 1450, y: 840 });
     assert.equal(await page.locator('.scene-object').count(), beforeCurtain + 1, `${name}: curtain object was not created`);
     assert.ok(await page.locator('.scene-object svg rect[fill="#e7ecea"]').count() >= 1, `${name}: curtain visual is missing`);
 
@@ -98,9 +98,9 @@ async function runCase(name, contextOptions = {}) {
     assert.equal(await page.locator('#laserBtn').evaluate(el => el.classList.contains('active')), true, `${name}: laser did not activate`);
     const sceneBox = await page.locator('#scene').boundingBox();
     assert.ok(sceneBox, `${name}: no scene box for laser`);
-    await page.mouse.move(sceneBox.x + 500, sceneBox.y + 420);
+    await page.mouse.move(sceneBox.x + 1080, sceneBox.y + 520);
     await page.mouse.down();
-    await page.mouse.move(sceneBox.x + 580, sceneBox.y + 460);
+    await page.mouse.move(sceneBox.x + 1140, sceneBox.y + 560);
     assert.equal(await page.locator('#laserDot').isVisible(), true, `${name}: laser dot is not visible while pointing`);
     await page.mouse.up();
     await page.waitForTimeout(260);
