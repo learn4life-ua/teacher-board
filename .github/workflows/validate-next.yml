@@ -149,6 +149,7 @@ jobs:
           grep -q "if(!editing&&(e.key==='Delete'||e.key==='Backspace')" src/app.js
           grep -q "#colorPicker').addEventListener('change'" src/app.js
           grep -q 'page.background===b.dataset.bg' src/app.js
+          grep -q 'if(i===state.activePage)return' src/app.js
           grep -q 'entries.some' src/objects/object-manager.js
           grep -q "closest?.('.tool,.instrument-btn')" src/tools/laser.js
           grep -q 'control===button' src/tools/laser.js
