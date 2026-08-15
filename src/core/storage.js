@@ -21,18 +21,15 @@ function normalizeObject(obj) {
 function migrateLegacyPage(page, index) {
   const objects = [];
 
-  // Newer legacy patches already stored object-like shapes/images in page.objects.
   if (Array.isArray(page?.objects)) {
     page.objects.map(normalizeObject).filter(Boolean).forEach(o => objects.push(o));
   }
 
-  // Original app stored all pen/shape canvas content as one PNG snapshot.
-  // Preserve it as a locked-looking image object so no lesson content is lost.
   if (typeof page?.image === 'string' && page.image.startsWith('data:image/')) {
     objects.unshift({
       id: id('legacyRaster'), kind: 'image', src: page.image,
       name: 'Імпорт зі старої дошки', x: 0, y: 0, w: 1600, h: 900,
-      rotation: 0, legacyRaster: true
+      rotation: 0, legacyRaster: true, locked: true
     });
   }
 
@@ -58,11 +55,23 @@ function migrateLegacyPage(page, index) {
   };
 }
 
+function serializedState(state) {
+  return JSON.stringify({
+    tool: state.tool,
+    color: state.color,
+    lineWidth: state.lineWidth,
+    zoom: state.zoom,
+    activePage: state.activePage,
+    pages: state.pages
+  });
+}
+
 function migrateLegacy(fallback) {
   if (localStorage.getItem(MIGRATION_FLAG) === '1') return null;
+  const raw = localStorage.getItem(LEGACY_KEY);
+  if (!raw) return null;
+
   try {
-    const raw = localStorage.getItem(LEGACY_KEY);
-    if (!raw) return null;
     const legacy = JSON.parse(raw);
     if (!Array.isArray(legacy.pages) || !legacy.pages.length) return null;
 
@@ -77,15 +86,20 @@ function migrateLegacy(fallback) {
       history: { undo: [], redo: [] }
     };
 
-    localStorage.setItem(MIGRATION_FLAG, '1');
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      tool: migrated.tool,
-      color: migrated.color,
-      lineWidth: migrated.lineWidth,
-      zoom: migrated.zoom,
-      activePage: migrated.activePage,
-      pages: migrated.pages
-    }));
+    const nextRaw = serializedState(migrated);
+
+    // Large v1 boards contain PNG snapshots. Avoid temporarily storing both copies,
+    // but restore v1 immediately if writing v2 fails for any reason.
+    localStorage.removeItem(LEGACY_KEY);
+    try {
+      localStorage.setItem(STORAGE_KEY, nextRaw);
+      localStorage.setItem(MIGRATION_FLAG, '1');
+    } catch (error) {
+      localStorage.removeItem(STORAGE_KEY);
+      try { localStorage.setItem(LEGACY_KEY, raw); } catch {}
+      throw error;
+    }
+
     return migrated;
   } catch {
     return null;
@@ -107,15 +121,7 @@ export function loadState(fallback) {
 }
 
 export function saveState(state) {
-  const clean = {
-    tool: state.tool,
-    color: state.color,
-    lineWidth: state.lineWidth,
-    zoom: state.zoom,
-    activePage: state.activePage,
-    pages: state.pages
-  };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(clean));
+  localStorage.setItem(STORAGE_KEY, serializedState(state));
 }
 
 export function clearSavedState() {
