@@ -2,7 +2,7 @@ export const SHAPE_LABELS = {
   line: 'Лінія', arrow: 'Стрілка', rect: 'Прямокутник', ellipse: 'Коло', triangle: 'Трикутник',
   rightTriangle: 'Прямокутний трикутник', parallelogram: 'Паралелограм', trapezoid: 'Трапеція',
   rhombus: 'Ромб', angle: 'Кут', arc: 'Дуга', axes: 'Координатні осі', numberLine: 'Числова пряма',
-  xyTable: 'Таблиця x / y'
+  xyTable: 'Таблиця x / y', curtain: 'Шторка'
 };
 
 export function shapeSvg(obj) {
@@ -14,6 +14,7 @@ export function shapeSvg(obj) {
     case 'line': return wrap(`<line x1="3" y1="97" x2="97" y2="3" ${stroke}/>`);
     case 'arrow': return arrowSvg(stroke,wrap);
     case 'rect': return wrap(`<rect x="3" y="3" width="94" height="94" ${stroke}/>`);
+    case 'curtain': return wrap(`<rect x="1" y="1" width="98" height="98" fill="#e7ecea" stroke="#657a73" stroke-width="1.2"/><path d="M8 8 H92 M8 15 H92" stroke="#a9b8b3" stroke-width="1"/><circle cx="50" cy="11.5" r="2.5" fill="#657a73"/>`);
     case 'ellipse': return wrap(`<ellipse cx="50" cy="50" rx="47" ry="47" ${stroke}/>`);
     case 'triangle': return wrap(`<path d="M50 3 L97 97 L3 97 Z" ${stroke}/>`);
     case 'rightTriangle': return wrap(`<path d="M4 4 L4 96 L96 96 Z" ${stroke}/>`);
