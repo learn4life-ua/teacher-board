@@ -2,6 +2,9 @@ import { activePage, uid } from '../core/state.js';
 import { pushHistory } from '../core/history.js';
 
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+const MAX_GRID_LINES = 240;
+const MIN_SAMPLES = 480;
+const MAX_SAMPLES = 1600;
 const FUNCTIONS = {
   sin: Math.sin,
   cos: Math.cos,
@@ -178,6 +181,23 @@ function compileExpression(expr) {
   };
 }
 
+function finite(value, fallback) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+export function adaptiveGridStep(min, max, requestedStep, maxLines = MAX_GRID_LINES) {
+  const range = Math.max(1e-12, Math.abs(max - min));
+  const base = Math.max(0.1, Math.abs(finite(requestedStep, 1)));
+  const desired = range / base;
+  const multiplier = Math.max(1, Math.ceil(desired / Math.max(1, maxLines)));
+  return base * multiplier;
+}
+
+export function graphSampleCount(width) {
+  return clamp(Math.round(finite(width, 760)), MIN_SAMPLES, MAX_SAMPLES);
+}
+
 export function evaluateExpression(expression, x) {
   return compileExpression(expression)(x);
 }
@@ -194,36 +214,41 @@ export function createGraphObject(state, expression = 'x') {
 
 export function graphSvg(g) {
   const width = 800, height = 600, pad = 44;
-  const xToPx = x => pad + (x - g.xMin) / (g.xMax - g.xMin) * (width - pad * 2);
-  const yToPx = y => height - pad - (y - g.yMin) / (g.yMax - g.yMin) * (height - pad * 2);
-  const major = Math.max(0.1, Number(g.majorStep) || 1);
+  const rawXMin=finite(g.xMin,-10),rawXMax=finite(g.xMax,10),rawYMin=finite(g.yMin,-10),rawYMax=finite(g.yMax,10);
+  const xMin=rawXMin, xMax=rawXMax>xMin?rawXMax:xMin+20;
+  const yMin=rawYMin, yMax=rawYMax>yMin?rawYMax:yMin+20;
+  const xToPx = x => pad + (x - xMin) / (xMax - xMin) * (width - pad * 2);
+  const yToPx = y => height - pad - (y - yMin) / (yMax - yMin) * (height - pad * 2);
+  const requestedMajor = Math.max(0.1, finite(g.majorStep,1));
+  const xMajor = adaptiveGridStep(xMin,xMax,requestedMajor);
+  const yMajor = adaptiveGridStep(yMin,yMax,requestedMajor);
   const grid = [];
   const labels = [];
 
-  for (let x = Math.ceil(g.xMin / major) * major; x <= g.xMax + 1e-9; x += major) {
+  for (let x = Math.ceil(xMin / xMajor) * xMajor; x <= xMax + 1e-9; x += xMajor) {
     const px = xToPx(x);
     grid.push(`<line class="graph-grid" x1="${px}" y1="${pad}" x2="${px}" y2="${height-pad}"/>`);
     if (Math.abs(x) > 1e-9) labels.push(`<text class="graph-label" x="${px}" y="${clamp(yToPx(0)+18,pad+16,height-pad+18)}" text-anchor="middle">${Number(x.toFixed(6))}</text>`);
   }
-  for (let y = Math.ceil(g.yMin / major) * major; y <= g.yMax + 1e-9; y += major) {
+  for (let y = Math.ceil(yMin / yMajor) * yMajor; y <= yMax + 1e-9; y += yMajor) {
     const py = yToPx(y);
     grid.push(`<line class="graph-grid" x1="${pad}" y1="${py}" x2="${width-pad}" y2="${py}"/>`);
     if (Math.abs(y) > 1e-9) labels.push(`<text class="graph-label" x="${clamp(xToPx(0)-8,pad-8,width-pad-8)}" y="${py+4}" text-anchor="end">${Number(y.toFixed(6))}</text>`);
   }
 
-  const axisX = g.yMin <= 0 && g.yMax >= 0 ? yToPx(0) : height - pad;
-  const axisY = g.xMin <= 0 && g.xMax >= 0 ? xToPx(0) : pad;
+  const axisX = yMin <= 0 && yMax >= 0 ? yToPx(0) : height - pad;
+  const axisY = xMin <= 0 && xMax >= 0 ? xToPx(0) : pad;
   let path = '';
   let error = '';
 
   try {
     const f = compileExpression(g.expression);
     let drawing = false;
-    const samples = Math.max(480, Math.round(g.w));
+    const samples = graphSampleCount(g.w);
     for (let i=0;i<=samples;i++) {
-      const x = g.xMin + (g.xMax-g.xMin) * i / samples;
+      const x = xMin + (xMax-xMin) * i / samples;
       const y = f(x);
-      if (!Number.isFinite(y) || y < g.yMin*4 || y > g.yMax*4) { drawing = false; continue; }
+      if (!Number.isFinite(y) || y < yMin*4 || y > yMax*4) { drawing = false; continue; }
       const px=xToPx(x), py=yToPx(y);
       if (py < -height || py > height*2) { drawing = false; continue; }
       path += `${drawing ? 'L' : 'M'}${px.toFixed(2)},${py.toFixed(2)} `;
