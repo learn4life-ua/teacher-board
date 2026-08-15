@@ -53,6 +53,16 @@ if(button&&scene&&dot){
   };
 
   button.addEventListener('click',()=>setActive(!active));
+
+  // Laser is an exclusive presentation tool. Choosing any normal board tool or
+  // geometry instrument must release it before that control handles the click.
+  document.addEventListener('click',e=>{
+    if(!active)return;
+    const control=e.target.closest?.('.tool,.instrument-btn');
+    if(!control||control===button)return;
+    setActive(false);
+  },true);
+
   scene.addEventListener('pointerdown',e=>{
     if(!active)return;
     e.preventDefault();
