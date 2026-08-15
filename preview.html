@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TeacherBoard Next — preview</title>
+  <link rel="stylesheet" href="css/next.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand"><strong>TeacherBoard Next</strong><span>модульна версія</span></div>
+      <div class="actions">
+        <button id="undoBtn" title="Скасувати">↶</button>
+        <button id="redoBtn" title="Повторити">↷</button>
+        <button id="deleteBtn" title="Видалити вибраний об'єкт">Видалити</button>
+        <button id="zoomOutBtn">−</button><span id="zoomLabel">100%</span><button id="zoomInBtn">+</button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <aside class="toolbar">
+        <button class="tool active" data-tool="select"><span>↖</span><em>Вибір</em></button>
+        <button class="tool" data-tool="pen"><span>✎</span><em>Ручка</em></button>
+        <button class="tool" data-tool="marker"><span>▰</span><em>Маркер</em></button>
+        <button class="tool" data-tool="eraser"><span>⌫</span><em>Гумка</em></button>
+        <button class="tool" id="shapeBtn"><span>◇</span><em>Фігури</em></button>
+        <div class="tool-options">
+          <input id="colorPicker" type="color" value="#245d55" title="Колір">
+          <select id="lineWidth" title="Товщина"><option value="2">2 px</option><option value="4" selected>4 px</option><option value="6">6 px</option><option value="10">10 px</option></select>
+        </div>
+      </aside>
+
+      <section class="board-wrap">
+        <div class="board-viewport" id="boardViewport">
+          <div class="scene" id="scene" data-background="clean" data-tool="select">
+            <canvas id="drawingCanvas" width="1600" height="900"></canvas>
+            <div class="object-layer" id="objectLayer"></div>
+            <div class="shape-preview" id="shapePreview" hidden></div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="side-panel">
+        <h2>Фон</h2>
+        <div class="backgrounds">
+          <button class="background-btn selected" data-bg="clean">Чистий</button>
+          <button class="background-btn" data-bg="grid">Клітинка</button>
+          <button class="background-btn" data-bg="lines">Лінії</button>
+          <button class="background-btn" data-bg="coords">Координатна</button>
+        </div>
+        <p><strong>Що вже працює:</strong> об'єктні фігури, вибір, переміщення, розмір, поворот, видалення, zoom, undo/redo, сторінки та вільне малювання.</p>
+      </aside>
+    </main>
+
+    <footer class="pagebar"><div id="pages" class="pages"></div><button id="addPageBtn">＋ Сторінка</button><span id="autosaveState">Збережено</span></footer>
+  </div>
+
+  <div id="shapeMenu" class="shape-menu" hidden></div>
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>
