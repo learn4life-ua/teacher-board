@@ -23,7 +23,9 @@ const data={
         {id:'t1',kind:'text',text:'Тест',x:'12',y:'13'},
         {id:'g1',kind:'graph',expression:'x^2',xMin:5,xMax:5,yMin:'bad',yMax:'bad',majorStep:-4},
         {id:'i1',kind:'image',src:''},
+        {id:'remote-image',kind:'image',src:'https://example.com/image.png'},
         {id:'bad',kind:'unknown'},
+        {id:'bad-shape',kind:'shape',shape:'inventedShape'},
         {id:'shape1',kind:'shape',shape:'rect',lineWidth:999}
       ],
       instruments:[
@@ -57,7 +59,7 @@ else{
   if(!graph||graph.xMin!==-10||graph.xMax!==10||graph.yMin!==-10||graph.yMax!==10||graph.majorStep!==.1)fail('Malformed graph ranges/step were not repaired.');
   const shape=page.objects.find(o=>o.id==='shape1');
   if(!shape||shape.lineWidth!==40)fail(`Shape line width must clamp to 40, got ${shape?.lineWidth}.`);
-  if(page.objects.some(o=>o.id==='i1'||o.id==='bad'))fail('Invalid image/unknown object must be removed.');
+  if(page.objects.some(o=>['i1','remote-image','bad','bad-shape'].includes(o.id)))fail('Invalid/remote image, unknown object or unsupported shape must be removed.');
 
   const protractor=page.instruments.find(i=>i.id==='pr1');
   if(!protractor||protractor.angle!==60||protractor.w!==420||protractor.h!==220)fail('Protractor defaults were not restored.');
