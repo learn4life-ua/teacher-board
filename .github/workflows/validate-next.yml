@@ -42,6 +42,9 @@ jobs:
       - name: Check zoom coordinate contract
         run: node tests/zoom-check.mjs
 
+      - name: Check page history contract
+        run: node tests/history-check.mjs
+
       - name: Check object edit panel contract
         shell: bash
         run: |
