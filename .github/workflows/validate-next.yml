@@ -51,6 +51,9 @@ jobs:
       - name: Check graph performance guards
         run: node tests/graph-performance-check.mjs
 
+      - name: Check graph SVG safety
+        run: node tests/graph-safety-check.mjs
+
       - name: Check PNG export contract
         run: node tests/export-contract-check.mjs
 
