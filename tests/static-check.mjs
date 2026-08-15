@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
+import { graphSvg } from '../src/math/graph.js';
 
 const root = process.cwd();
 const errors = [];
@@ -70,6 +71,15 @@ const laser=exists('src/tools/laser.js')?read('src/tools/laser.js'):'';
 if(!/pointerdown/.test(laser)||!/pointermove/.test(laser)||!/pointerup/.test(laser)) fail('Laser module має обробляти pointerdown/pointermove/pointerup.');
 if(!/laser-active/.test(laser)||!/laserDot/.test(laser)) fail('Laser module не має повного activation/overlay контракту.');
 if(/setPointerCapture/.test(laser)) fail('Laser module не повинен залежати від setPointerCapture — це нестабільно на touch/browser smoke.');
+
+const graphBase={x:0,y:0,w:760,h:560,color:'#245d55',xMin:-10,xMax:10,yMin:-10,yMax:10,majorStep:1};
+for(const expression of ['x^2','2*x-3','sin(x)','sqrt(x)','abs(x)','pi*x']){
+  const svg=graphSvg({...graphBase,expression});
+  if(svg.includes('graph-error')) fail(`Графік не приймає дозволений вираз: ${expression}`);
+  if(!/class="graph-curve"[^>]+d="[^"]+"/.test(svg)) fail(`Графік не побудував криву для: ${expression}`);
+}
+const rejected=graphSvg({...graphBase,expression:'alert(1)'});
+if(!rejected.includes('graph-error')) fail('Graph evaluator має відхиляти сторонні JavaScript-ідентифікатори.');
 
 const requiredModules = [
   'src/app.js','src/core/state.js','src/core/storage.js','src/core/history.js','src/core/scene.js',
