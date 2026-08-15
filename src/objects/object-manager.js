@@ -2,6 +2,7 @@ import { activePage, uid } from '../core/state.js';
 import { pushHistory } from '../core/history.js';
 import { shapeSvg } from './shapes.js';
 import { graphSvg, createGraphObject } from '../math/graph.js';
+import { textMarkup } from './text.js';
 
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 
@@ -46,6 +47,21 @@ export class ObjectManager {
     return obj;
   }
 
+  addText(text, options = {}) {
+    pushHistory(this.state);
+    const obj = {
+      id: uid('text'), kind: 'text', text: String(text || 'Текст'),
+      x: options.x ?? 360, y: options.y ?? 180,
+      w: options.w ?? 420, h: options.h ?? 100,
+      rotation: 0, color: options.color || this.state.color,
+      fontSize: options.fontSize || 32
+    };
+    this.objects.push(obj);
+    this.state.selection = obj.id;
+    this.changed();
+    return obj;
+  }
+
   addSegment(a, b, options = {}) { return this.addSegments([{ a, b }], options)[0]; }
 
   addSegments(segments, options = {}) {
@@ -70,7 +86,7 @@ export class ObjectManager {
 
   addCircle(center, radius, options = {}) {
     const r = Math.max(12, radius);
-    return this.addShape('ellipse', { x: center.x-r, y: center.y-r, w:r*2, h:r*2 }, { minW:24, minH:24, color:options.color, lineWidth:options.lineWidth });
+    return this.addShape('ellipse', { x:center.x-r, y:center.y-r, w:r*2, h:r*2 }, { minW:24, minH:24, color:options.color, lineWidth:options.lineWidth });
   }
 
   selected() { return this.objects.find(o => o.id === this.state.selection) || null; }
@@ -102,18 +118,21 @@ export class ObjectManager {
 
   createElement(obj) {
     const el = document.createElement('div');
-    el.className = `scene-object${obj.kind === 'graph' ? ' graph-object' : ''}${obj.id === this.state.selection ? ' selected' : ''}`;
+    el.className = `scene-object${obj.kind === 'graph' ? ' graph-object' : ''}${obj.kind === 'text' ? ' text-object' : ''}${obj.id === this.state.selection ? ' selected' : ''}`;
     el.dataset.id = obj.id;
-    Object.assign(el.style, {
-      left:`${obj.x}px`, top:`${obj.y}px`, width:`${obj.w}px`, height:`${obj.h}px`,
-      color:obj.color || '#245d55', transform:`rotate(${obj.rotation || 0}deg)`
-    });
-    el.innerHTML = obj.kind === 'shape' ? shapeSvg(obj) : obj.kind === 'graph' ? graphSvg(obj) : '';
+    Object.assign(el.style, { left:`${obj.x}px`, top:`${obj.y}px`, width:`${obj.w}px`, height:`${obj.h}px`, color:obj.color || '#245d55', transform:`rotate(${obj.rotation || 0}deg)` });
+    el.innerHTML = obj.kind === 'shape' ? shapeSvg(obj) : obj.kind === 'graph' ? graphSvg(obj) : obj.kind === 'text' ? textMarkup(obj) : '';
 
     if (obj.id === this.state.selection) {
       el.insertAdjacentHTML('beforeend', `<span class="object-handle resize-handle" data-handle="resize" title="Змінити розмір"></span><span class="object-handle rotate-handle" data-handle="rotate" title="Повернути">↻</span><button class="object-delete" type="button" title="Видалити">×</button>`);
     }
     el.addEventListener('pointerdown', e => this.pointerDownObject(e, obj));
+    el.addEventListener('dblclick', e => {
+      if (obj.kind !== 'text') return;
+      e.stopPropagation();
+      const next = prompt('Редагувати текст:', obj.text);
+      if (next !== null) this.updateSelected({ text: next });
+    });
     el.querySelector('.object-delete')?.addEventListener('pointerdown', e => e.stopPropagation());
     el.querySelector('.object-delete')?.addEventListener('click', e => { e.stopPropagation(); this.deleteSelected(); });
     return el;
@@ -137,21 +156,24 @@ export class ObjectManager {
     const obj = this.objects.find(o => o.id === this.drag.id);
     if (!obj) return;
     const scale = this.state.zoom || 1;
-    const dx = (e.clientX-this.drag.startX)/scale, dy=(e.clientY-this.drag.startY)/scale;
+    const dx=(e.clientX-this.drag.startX)/scale, dy=(e.clientY-this.drag.startY)/scale;
     if (this.drag.mode === 'move') {
       obj.x = clamp(this.drag.x + dx, -obj.w + 20, 1580);
       obj.y = clamp(this.drag.y + dy, -obj.h + 20, 880);
     } else if (this.drag.mode === 'resize') {
-      obj.w = Math.max(obj.kind === 'graph' ? 320 : 40, this.drag.w + dx);
-      obj.h = Math.max(obj.kind === 'graph' ? 240 : 20, this.drag.h + dy);
+      const minW = obj.kind === 'graph' ? 320 : obj.kind === 'text' ? 120 : 40;
+      const minH = obj.kind === 'graph' ? 240 : obj.kind === 'text' ? 50 : 20;
+      obj.w = Math.max(minW, this.drag.w + dx);
+      obj.h = Math.max(minH, this.drag.h + dy);
+      if (obj.kind === 'text') obj.fontSize = clamp(Math.round(32 * obj.h / 100), 14, 96);
     } else if (this.drag.mode === 'rotate') {
-      const rect = this.layer.getBoundingClientRect();
-      const cx = rect.left + this.drag.center.x * scale, cy = rect.top + this.drag.center.y * scale;
-      obj.rotation = Math.atan2(e.clientY-cy,e.clientX-cx)*180/Math.PI+90;
+      const rect=this.layer.getBoundingClientRect();
+      const cx=rect.left+this.drag.center.x*scale, cy=rect.top+this.drag.center.y*scale;
+      obj.rotation=Math.atan2(e.clientY-cy,e.clientX-cx)*180/Math.PI+90;
     }
     this.render();
   }
 
-  pointerUp() { if (!this.drag) return; this.drag = null; this.changed(); }
+  pointerUp() { if (!this.drag) return; this.drag=null; this.changed(); }
   changed() { this.render(); this.onChange?.(); }
 }
