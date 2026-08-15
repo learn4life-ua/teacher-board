@@ -2,9 +2,11 @@ import { activePage, uid } from '../core/state.js';
 import { pushHistory } from '../core/history.js';
 
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+const MATH_TOKEN = /Math\.(?:PI|E|sin|cos|tan|sqrt|abs|exp|log)/g;
 
 function safeExpression(expr) {
-  return String(expr || 'x').trim()
+  const body = String(expr || 'x').trim()
+    .replace(/\bX\b/g, 'x')
     .replaceAll('^', '**')
     .replace(/\bpi\b/gi, 'Math.PI')
     .replace(/\be\b/g, 'Math.E')
@@ -15,11 +17,16 @@ function safeExpression(expr) {
     .replace(/\babs\b/g, 'Math.abs')
     .replace(/\bexp\b/g, 'Math.exp')
     .replace(/\bln\b/g, 'Math.log');
+
+  // Remove only the Math identifiers we explicitly support. Anything alphabetic
+  // left afterwards is not a mathematical expression and must never reach Function().
+  const remainder = body.replace(MATH_TOKEN, '');
+  if (!/^[0-9x+\-*/().,\s]*$/.test(remainder)) throw new Error('Недопустимий вираз');
+  return body;
 }
 
 function evaluator(expr) {
   const body = safeExpression(expr);
-  if (!/^[0-9xX+\-*/().,\s*MathPIEabcdefghijklmnopqrstuvwxyz]+$/i.test(body)) throw new Error('Недопустимий вираз');
   const fn = new Function('x', `"use strict"; return (${body});`);
   return x => {
     const y = Number(fn(x));
