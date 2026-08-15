@@ -17,6 +17,7 @@ const scene=new Scene({viewport,scene:sceneEl,zoomLabel,state});
 const objectManager=new ObjectManager({state,layer:objectLayer,onChange:commit});
 const drawing=new FreehandDrawing({state,canvas,scene,onChange:commit});
 const geometryTools=new GeometryTools({state,layer:instrumentLayer,objectManager,onChange:commit});
+const MIN_SHAPE_GESTURE=8;
 let shapeGesture=null,renamePageIndex=null;
 
 function setAutosaveStatus(ok){autosaveState.textContent=ok?'Збережено':'Не збережено — сховище заповнене';autosaveState.dataset.status=ok?'ok':'error';}
@@ -36,7 +37,36 @@ async function toggleFullscreen(){try{if(!document.fullscreenElement)await docum
 
 function buildShapeMenu(){shapeMenu.innerHTML=Object.entries(SHAPE_LABELS).map(([key,label])=>`<button type="button" data-shape="${key}">${label}</button>`).join('');shapeMenu.addEventListener('click',e=>{const b=e.target.closest('[data-shape]');if(!b)return;state.tool=`shape:${b.dataset.shape}`;$$('.tool').forEach(x=>x.classList.remove('active'));$('#shapeBtn').classList.add('active');sceneEl.dataset.tool='shape';shapeMenu.hidden=true;});}
 function cancelShapeGesture(){if(!shapeGesture)return;shapeGesture=null;$('#shapePreview').hidden=true;}
-function bindShapeDrawing(){sceneEl.addEventListener('pointerdown',e=>{if(!state.tool.startsWith('shape:')||e.target.closest('.scene-object,.geometry-tool'))return;e.preventDefault();const p=scene.pointFromEvent(e);shapeGesture={start:p,end:p};updateShapePreview();});sceneEl.addEventListener('pointermove',e=>{if(!shapeGesture)return;shapeGesture.end=scene.pointFromEvent(e);updateShapePreview();});window.addEventListener('pointerup',()=>{if(!shapeGesture)return;const{start,end}=shapeGesture,type=state.tool.split(':')[1],x=Math.min(start.x,end.x),y=Math.min(start.y,end.y),w=Math.abs(end.x-start.x),h=Math.abs(end.y-start.y);$('#shapePreview').hidden=true;shapeGesture=null;const obj=objectManager.addShape(type,{x,y,w,h});setTool('select');objectManager.select(obj.id);});window.addEventListener('pointercancel',cancelShapeGesture);window.addEventListener('blur',cancelShapeGesture);}
+function bindShapeDrawing(){
+  sceneEl.addEventListener('pointerdown',e=>{
+    if(!state.tool.startsWith('shape:')||e.target.closest('.scene-object,.geometry-tool'))return;
+    e.preventDefault();
+    const p=scene.pointFromEvent(e);
+    shapeGesture={start:p,end:p,pointerId:e.pointerId??null};
+    updateShapePreview();
+  });
+  sceneEl.addEventListener('pointermove',e=>{
+    if(!shapeGesture)return;
+    if(shapeGesture.pointerId!==null&&e.pointerId!==undefined&&e.pointerId!==shapeGesture.pointerId)return;
+    shapeGesture.end=scene.pointFromEvent(e);
+    updateShapePreview();
+  });
+  window.addEventListener('pointerup',e=>{
+    if(!shapeGesture)return;
+    if(shapeGesture.pointerId!==null&&e?.pointerId!==undefined&&e.pointerId!==shapeGesture.pointerId)return;
+    const{start,end}=shapeGesture,type=state.tool.split(':')[1];
+    const dx=end.x-start.x,dy=end.y-start.y;
+    $('#shapePreview').hidden=true;
+    shapeGesture=null;
+    if(Math.hypot(dx,dy)<MIN_SHAPE_GESTURE)return;
+    const x=Math.min(start.x,end.x),y=Math.min(start.y,end.y),w=Math.abs(dx),h=Math.abs(dy);
+    const obj=objectManager.addShape(type,{x,y,w,h});
+    setTool('select');
+    objectManager.select(obj.id);
+  });
+  window.addEventListener('pointercancel',cancelShapeGesture);
+  window.addEventListener('blur',cancelShapeGesture);
+}
 function updateShapePreview(){const p=$('#shapePreview'),{start,end}=shapeGesture;p.hidden=false;p.style.left=`${Math.min(start.x,end.x)}px`;p.style.top=`${Math.min(start.y,end.y)}px`;p.style.width=`${Math.abs(end.x-start.x)}px`;p.style.height=`${Math.abs(end.y-start.y)}px`;}
 
 function graphValues(){const xMin=Number($('#graphXMin').value),xMax=Number($('#graphXMax').value),yMin=Number($('#graphYMin').value),yMax=Number($('#graphYMax').value),majorStep=Number($('#graphStep').value);if(!(xMin<xMax)||!(yMin<yMax)||!(majorStep>0))return null;return{expression:$('#graphExpression').value.trim()||'x',xMin,xMax,yMin,yMax,majorStep};}
