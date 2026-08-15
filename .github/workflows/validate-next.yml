@@ -108,3 +108,13 @@ jobs:
             echo 'Blocking browser alert() must not be used in the main app or PNG export.'
             exit 1
           fi
+
+      - name: Check large image memory contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'MAX_SOURCE_DIMENSION = 1600' src/objects/images.js
+          grep -q 'SMALL_FILE_BYTES' src/objects/images.js
+          grep -q 'URL.createObjectURL' src/objects/images.js
+          grep -q 'URL.revokeObjectURL' src/objects/images.js
+          grep -q 'finally' src/objects/images.js
