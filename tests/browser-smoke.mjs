@@ -7,6 +7,17 @@ const watchdog=setTimeout(()=>{
   process.exit(124);
 },45000);
 
+const legacyFixture={
+  activePage:0,
+  pages:[{
+    id:'legacy-page-1',
+    name:'Старий урок',
+    background:'grid',
+    image:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+    texts:[{text:'Старий текст',x:123,y:234,color:'#123456'}]
+  }]
+};
+
 async function drawShape(page,shape,from,to){
   await page.click('#shapeBtn');
   assert.equal(await page.locator('#shapeMenu').isVisible(),true,'shape menu did not open');
@@ -32,22 +43,11 @@ async function runLegacyMigrationCase(){
     page.on('pageerror',e=>errors.push(String(e)));
     page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
 
-    const legacy={
-      activePage:0,
-      pages:[{
-        id:'legacy-page-1',
-        name:'Старий урок',
-        background:'grid',
-        image:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
-        texts:[{text:'Старий текст',x:123,y:234,color:'#123456'}]
-      }]
-    };
-
     await page.addInitScript(data=>{
       localStorage.removeItem('teacherboard.v2');
       localStorage.removeItem('teacherboard.v2.migratedFromV1');
       localStorage.setItem('teacherboard.v1',JSON.stringify(data));
-    },legacy);
+    },legacyFixture);
 
     await page.goto(baseURL,{waitUntil:'networkidle'});
     await page.waitForSelector('#scene');
@@ -91,6 +91,44 @@ async function runLegacyMigrationCase(){
     assert.equal(await page.evaluate(()=>localStorage.getItem('teacherboard.v1')),null,'migration: v1 unexpectedly reappeared after reload');
     assert.deepEqual(errors,[],`migration: browser errors: ${errors.join(' | ')}`);
     console.log('[migration] v1 → v2 ok');
+  }finally{
+    await browser.close();
+  }
+}
+
+async function runLegacyRollbackCase(){
+  console.log('[migration-rollback] start');
+  const browser=await chromium.launch({headless:true});
+  try{
+    const context=await browser.newContext({viewport:{width:1100,height:800}});
+    const page=await context.newPage();
+    page.setDefaultTimeout(8000);
+
+    await page.addInitScript(data=>{
+      localStorage.removeItem('teacherboard.v2');
+      localStorage.removeItem('teacherboard.v2.migratedFromV1');
+      localStorage.setItem('teacherboard.v1',JSON.stringify(data));
+      const original=Storage.prototype.setItem;
+      Storage.prototype.setItem=function(key,value){
+        if(key==='teacherboard.v2') throw new DOMException('Simulated storage quota failure','QuotaExceededError');
+        return original.call(this,key,value);
+      };
+    },legacyFixture);
+
+    await page.goto(baseURL,{waitUntil:'networkidle'});
+    await page.waitForSelector('#scene');
+
+    const state=await page.evaluate(()=>({
+      v1:localStorage.getItem('teacherboard.v1'),
+      v2:localStorage.getItem('teacherboard.v2'),
+      flag:localStorage.getItem('teacherboard.v2.migratedFromV1')
+    }));
+    assert.ok(state.v1,'migration rollback: original v1 was not restored after v2 write failure');
+    const restored=JSON.parse(state.v1);
+    assert.equal(restored.pages?.[0]?.name,'Старий урок','migration rollback: restored v1 content changed');
+    assert.equal(state.v2,null,'migration rollback: partial v2 state must be removed');
+    assert.equal(state.flag,null,'migration rollback: migration flag must not be set on failure');
+    console.log('[migration-rollback] v1 restored after failed v2 write');
   }finally{
     await browser.close();
   }
@@ -206,6 +244,7 @@ async function runCase(name,contextOptions={}){
 }
 
 await runLegacyMigrationCase();
+await runLegacyRollbackCase();
 await runCase('desktop',{viewport:{width:1440,height:1000}});
 await runCase('tablet',{viewport:{width:820,height:1180},hasTouch:true});
 await runCase('android',{...devices['Pixel 7']});
