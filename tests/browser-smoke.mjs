@@ -2,6 +2,10 @@ import { chromium, devices } from 'playwright';
 import assert from 'node:assert/strict';
 
 const baseURL = process.env.TB_URL || 'http://127.0.0.1:4173/preview.html';
+const watchdog=setTimeout(()=>{
+  console.error('TeacherBoard browser smoke watchdog: test exceeded 60 seconds. See the last completed step above.');
+  process.exit(124);
+},60000);
 
 async function drawShape(page, shape, from, to) {
   await page.click('#shapeBtn');
@@ -143,4 +147,5 @@ async function runCase(name, contextOptions = {}) {
 await runCase('desktop', { viewport: { width: 1440, height: 1000 } });
 await runCase('tablet', { viewport: { width: 820, height: 1180 }, hasTouch: true });
 await runCase('android', { ...devices['Pixel 7'] });
+clearTimeout(watchdog);
 console.log('TeacherBoard browser smoke: OK');
