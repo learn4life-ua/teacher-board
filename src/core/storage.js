@@ -66,6 +66,12 @@ function serializedState(state) {
   });
 }
 
+function migrationStorageError(error) {
+  try {
+    window.dispatchEvent(new CustomEvent('teacherboard:storage-error', { detail: { error, migration: true } }));
+  } catch {}
+}
+
 function migrateLegacy(fallback) {
   if (localStorage.getItem(MIGRATION_FLAG) === '1') return null;
   const raw = localStorage.getItem(LEGACY_KEY);
@@ -97,6 +103,7 @@ function migrateLegacy(fallback) {
     } catch (error) {
       localStorage.removeItem(STORAGE_KEY);
       try { localStorage.setItem(LEGACY_KEY, raw); } catch {}
+      migrationStorageError(error);
       throw error;
     }
 
@@ -121,7 +128,15 @@ export function loadState(fallback) {
 }
 
 export function saveState(state) {
-  localStorage.setItem(STORAGE_KEY, serializedState(state));
+  try {
+    localStorage.setItem(STORAGE_KEY, serializedState(state));
+    return true;
+  } catch (error) {
+    try {
+      window.dispatchEvent(new CustomEvent('teacherboard:storage-error', { detail: { error, migration: false } }));
+    } catch {}
+    return false;
+  }
 }
 
 export function clearSavedState() {
