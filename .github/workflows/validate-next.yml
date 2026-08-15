@@ -1,0 +1,40 @@
+name: Validate TeacherBoard Next
+
+on:
+  push:
+    branches:
+      - agent/reorganize-teacher-board
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'css/next.css'
+      - 'preview.html'
+      - 'tests/**'
+      - '.github/workflows/validate-next.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Check JavaScript syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' file; do
+            echo "Checking $file"
+            node --check "$file"
+          done < <(find src tests -type f \( -name '*.js' -o -name '*.mjs' \) -print0)
+
+      - name: Check module paths and preview contract
+        run: node tests/static-check.mjs
