@@ -62,6 +62,30 @@
 #renamePageSaveBtn{border-color:#2f7c69;background:#2f7c69;color:#fff}
 .dialog-actions button.danger{border-color:#a93e3e;background:#a93e3e;color:#fff}
 
+.status-toast{
+  position:fixed;
+  left:50%;
+  bottom:72px;
+  z-index:2600;
+  max-width:min(520px,calc(100vw - 32px));
+  box-sizing:border-box;
+  transform:translate(-50%,10px);
+  opacity:0;
+  pointer-events:none;
+  padding:11px 15px;
+  border-radius:12px;
+  background:#254f44;
+  color:#fff;
+  font-size:14px;
+  font-weight:700;
+  line-height:1.35;
+  box-shadow:0 10px 28px rgba(18,43,36,.24);
+  transition:opacity .18s ease,transform .18s ease;
+}
+.status-toast.show{opacity:1;transform:translate(-50%,0)}
+.status-toast[data-type="success"]{background:#256b50}
+.status-toast[data-type="error"]{background:#983f3f}
+
 #autosaveState[data-status="error"]{
   color:#9a3a3a;
   font-weight:700;
@@ -80,4 +104,5 @@
   .geometry-action{min-height:36px;padding:8px 12px}
   .dialog-actions button{min-height:48px;padding-inline:18px}
   .page-name-dialog input{min-height:50px}
+  .status-toast{bottom:82px;font-size:15px;padding:12px 16px}
 }
