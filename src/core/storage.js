@@ -52,6 +52,11 @@ function normalizeObject(obj) {
   if (copy.kind === 'shape') {
     normalizeNumberLine(copy);
     if (!SHAPE_TYPES.has(copy.shape)) return null;
+    if(copy.shape==='circle'){
+      const side=Math.max(40,copy.w,copy.h);
+      copy.w=side;
+      copy.h=side;
+    }
     copy.color = typeof copy.color === 'string' ? copy.color : '#245d55';
     copy.lineWidth = clamp(copy.lineWidth,1,40,4);
   } else if (copy.kind === 'graph') {
