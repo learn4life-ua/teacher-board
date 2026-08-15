@@ -26,6 +26,7 @@ export class ObjectManager {
   select(id){const obj=this.objects.find(o=>o.id===id);this.state.selection=obj?.locked?null:(id||null);this.render();}
   deleteSelected(){const id=this.state.selection;if(!id)return;const i=this.objects.findIndex(o=>o.id===id);if(i<0||this.objects[i].locked)return;pushHistory(this.state);this.objects.splice(i,1);this.state.selection=null;this.changed();}
   updateSelected(patch){const obj=this.selected();if(!obj||obj.locked)return;pushHistory(this.state);Object.assign(obj,patch);this.changed();}
+  requestEdit(obj){if(!obj||!['text','graph'].includes(obj.kind))return;this.select(obj.id);this.layer.dispatchEvent(new CustomEvent('objectedit',{detail:{id:obj.id,kind:obj.kind}}));}
 
   render(){this.layer.innerHTML='';for(const obj of this.objects)this.layer.appendChild(this.createElement(obj));}
   createElement(obj){
@@ -34,16 +35,16 @@ export class ObjectManager {
     el.dataset.id=obj.id; Object.assign(el.style,{left:`${obj.x}px`,top:`${obj.y}px`,width:`${obj.w}px`,height:`${obj.h}px`,color:obj.color||'#245d55',transform:`rotate(${obj.rotation||0}deg)`});
     if(obj.locked) el.style.pointerEvents='none';
     el.innerHTML=obj.kind==='shape'?shapeSvg(obj):obj.kind==='graph'?graphSvg(obj):obj.kind==='text'?textMarkup(obj):obj.kind==='image'?imageMarkup(obj):'';
-    if(obj.id===this.state.selection&&!obj.locked) el.insertAdjacentHTML('beforeend','<span class="object-handle resize-handle" data-handle="resize" title="Змінити розмір"></span><span class="object-handle rotate-handle" data-handle="rotate" title="Повернути">↻</span><button class="object-delete" type="button" title="Видалити">×</button>');
+    if(obj.id===this.state.selection&&!obj.locked){
+      const edit=['text','graph'].includes(obj.kind)?'<button class="object-edit" type="button" title="Редагувати">✎</button>':'';
+      el.insertAdjacentHTML('beforeend',`${edit}<span class="object-handle resize-handle" data-handle="resize" title="Змінити розмір"></span><span class="object-handle rotate-handle" data-handle="rotate" title="Повернути">↻</span><button class="object-delete" type="button" title="Видалити">×</button>`);
+    }
     if(!obj.locked){
       el.addEventListener('pointerdown',e=>this.pointerDownObject(e,obj));
-      el.addEventListener('dblclick',e=>{
-        if(!['text','graph'].includes(obj.kind))return;
-        e.preventDefault();e.stopPropagation();
-        this.select(obj.id);
-        this.layer.dispatchEvent(new CustomEvent('objectedit',{detail:{id:obj.id,kind:obj.kind}}));
-      });
+      el.addEventListener('dblclick',e=>{if(!['text','graph'].includes(obj.kind))return;e.preventDefault();e.stopPropagation();this.requestEdit(obj);});
     }
+    el.querySelector('.object-edit')?.addEventListener('pointerdown',e=>e.stopPropagation());
+    el.querySelector('.object-edit')?.addEventListener('click',e=>{e.stopPropagation();this.requestEdit(obj);});
     el.querySelector('.object-delete')?.addEventListener('pointerdown',e=>e.stopPropagation());
     el.querySelector('.object-delete')?.addEventListener('click',e=>{e.stopPropagation();this.deleteSelected();});
     return el;
