@@ -28,6 +28,7 @@ const data={
         {id:'bad',kind:'unknown'},
         {id:'bad-shape',kind:'shape',shape:'inventedShape'},
         {id:'shape1',kind:'shape',shape:'rect',lineWidth:999},
+        {id:'circle1',kind:'shape',shape:'circle',w:120,h:220,lineWidth:4},
         {id:'legacy-n5',kind:'shape',shape:'number5',lineWidth:4},
         {id:'legacy-n10',kind:'shape',shape:'number10',lineWidth:4},
         {id:'legacy-blank',kind:'shape',shape:'numberBlank',lineWidth:4}
@@ -64,6 +65,9 @@ else{
   if(!graph||graph.xMin!==-10||graph.xMax!==10||graph.yMin!==-10||graph.yMax!==10||graph.majorStep!==.1)fail('Malformed graph ranges/step were not repaired.');
   const shape=page.objects.find(o=>o.id==='shape1');
   if(!shape||shape.lineWidth!==40)fail(`Shape line width must clamp to 40, got ${shape?.lineWidth}.`);
+  const circle=page.objects.find(o=>o.id==='circle1');
+  if(!circle||circle.w!==220||circle.h!==220)fail(`Persisted circle must normalize to square bounds, got ${circle?.w}×${circle?.h}.`);
+  if(circle&&!shapeSvg(circle).includes('<ellipse'))fail('Circle SVG renderer must remain available after storage normalization.');
   if(page.objects.some(o=>['i1','remote-image','bad','bad-shape'].includes(o.id)))fail('Invalid/remote image, unknown object or unsupported shape must be removed.');
 
   const n5=page.objects.find(o=>o.id==='legacy-n5');
@@ -121,4 +125,4 @@ if(errors.length){
   errors.forEach(error=>console.error(`- ${error}`));
   process.exit(1);
 }
-console.log('TeacherBoard storage check: OK (corrupt data, zoom, legacy number lines, quota handling)');
+console.log('TeacherBoard storage check: OK (corrupt data, zoom, circle, legacy number lines, quota handling)');
