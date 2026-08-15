@@ -1,3 +1,20 @@
+export const MIN_ZOOM = 0.5;
+export const MAX_ZOOM = 2;
+
+export function normalizeZoom(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return 1;
+  return Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.round(numeric * 100) / 100));
+}
+
+export function scenePointFromClient({ clientX, clientY, rectLeft, rectTop, zoom = 1 }) {
+  const z = normalizeZoom(zoom) || 1;
+  return {
+    x: (clientX - rectLeft) / z,
+    y: (clientY - rectTop) / z
+  };
+}
+
 export class Scene {
   constructor({ viewport, scene, zoomLabel, state }) {
     this.viewport = viewport;
@@ -8,12 +25,13 @@ export class Scene {
   }
 
   setZoom(value) {
-    this.state.zoom = Math.max(0.5, Math.min(2, Math.round(value * 10) / 10));
+    this.state.zoom = normalizeZoom(value);
     this.applyZoom();
   }
 
   applyZoom() {
-    const z = this.state.zoom || 1;
+    const z = normalizeZoom(this.state.zoom || 1);
+    this.state.zoom = z;
     this.scene.style.transform = `scale(${z})`;
     this.scene.style.transformOrigin = 'top left';
     this.viewport.style.setProperty('--scene-zoom', z);
@@ -22,10 +40,12 @@ export class Scene {
 
   pointFromEvent(e) {
     const rect = this.scene.getBoundingClientRect();
-    const z = this.state.zoom || 1;
-    return {
-      x: (e.clientX - rect.left) / z,
-      y: (e.clientY - rect.top) / z
-    };
+    return scenePointFromClient({
+      clientX: e.clientX,
+      clientY: e.clientY,
+      rectLeft: rect.left,
+      rectTop: rect.top,
+      zoom: this.state.zoom || 1
+    });
   }
 }
