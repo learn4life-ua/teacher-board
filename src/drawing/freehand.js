@@ -16,6 +16,7 @@ export class FreehandDrawing {
     this.canvas.addEventListener('pointerdown', e => this.down(e));
     this.canvas.addEventListener('pointermove', e => this.move(e));
     window.addEventListener('pointerup', e => this.up(e));
+    window.addEventListener('pointercancel', e => this.up(e));
   }
 
   down(e) {
@@ -56,12 +57,20 @@ export class FreehandDrawing {
     const pts = stroke.points || [];
     if (!pts.length) return;
     const ctx = this.ctx;
+    const isMarker = stroke.tool === 'marker';
+    const isEraser = stroke.tool === 'eraser';
+
     ctx.save();
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    ctx.lineWidth = stroke.tool === 'marker' ? Math.max(14, stroke.width * 3) : Math.max(1, stroke.width);
-    ctx.globalAlpha = stroke.tool === 'marker' ? 0.24 : 1;
-    ctx.strokeStyle = stroke.tool === 'eraser' ? '#ffffff' : stroke.color;
+    ctx.globalCompositeOperation = isEraser ? 'destination-out' : 'source-over';
+    ctx.lineWidth = isEraser
+      ? Math.max(18, stroke.width * 4)
+      : isMarker
+        ? Math.max(14, stroke.width * 3)
+        : Math.max(1, stroke.width);
+    ctx.globalAlpha = isMarker ? 0.24 : 1;
+    ctx.strokeStyle = isEraser ? 'rgba(0,0,0,1)' : stroke.color;
     ctx.beginPath();
     ctx.moveTo(pts[0].x, pts[0].y);
     for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
