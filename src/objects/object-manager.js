@@ -42,9 +42,33 @@ export class ObjectManager {
     el.querySelector('.object-delete')?.addEventListener('click',e=>{e.stopPropagation();this.deleteSelected();});
     return el;
   }
-  pointerDownObject(e,obj){if(this.state.tool!=='select'||obj.locked)return;e.preventDefault();e.stopPropagation();this.select(obj.id);const handle=e.target.closest('[data-handle]')?.dataset.handle;pushHistory(this.state);this.drag={mode:handle||'move',id:obj.id,startX:e.clientX,startY:e.clientY,x:obj.x,y:obj.y,w:obj.w,h:obj.h,rotation:obj.rotation||0,center:{x:obj.x+obj.w/2,y:obj.y+obj.h/2}};}
+  pointerDownObject(e,obj){if(this.state.tool!=='select'||obj.locked)return;e.preventDefault();e.stopPropagation();this.select(obj.id);const handle=e.target.closest('[data-handle]')?.dataset.handle;pushHistory(this.state);this.drag={mode:handle||'move',id:obj.id,startX:e.clientX,startY:e.clientY,x:obj.x,y:obj.y,w:obj.w,h:obj.h,aspect:obj.w/Math.max(1,obj.h),rotation:obj.rotation||0,center:{x:obj.x+obj.w/2,y:obj.y+obj.h/2}};}
   bindGlobalPointerEvents(){window.addEventListener('pointermove',e=>this.pointerMove(e));window.addEventListener('pointerup',()=>this.pointerUp());}
-  pointerMove(e){if(!this.drag)return;const obj=this.objects.find(o=>o.id===this.drag.id);if(!obj||obj.locked)return;const scale=this.state.zoom||1,dx=(e.clientX-this.drag.startX)/scale,dy=(e.clientY-this.drag.startY)/scale;if(this.drag.mode==='move'){obj.x=clamp(this.drag.x+dx,-obj.w+20,1580);obj.y=clamp(this.drag.y+dy,-obj.h+20,880);}else if(this.drag.mode==='resize'){const minW=obj.kind==='graph'?320:obj.kind==='text'?120:obj.kind==='image'?80:40;const minH=obj.kind==='graph'?240:obj.kind==='text'?50:obj.kind==='image'?60:20;obj.w=Math.max(minW,this.drag.w+dx);obj.h=Math.max(minH,this.drag.h+dy);if(obj.kind==='text')obj.fontSize=clamp(Math.round(32*obj.h/100),14,96);}else if(this.drag.mode==='rotate'){const rect=this.layer.getBoundingClientRect(),cx=rect.left+this.drag.center.x*scale,cy=rect.top+this.drag.center.y*scale;obj.rotation=Math.atan2(e.clientY-cy,e.clientX-cx)*180/Math.PI+90;}this.render();}
+  pointerMove(e){
+    if(!this.drag)return;
+    const obj=this.objects.find(o=>o.id===this.drag.id);if(!obj||obj.locked)return;
+    const scale=this.state.zoom||1,dx=(e.clientX-this.drag.startX)/scale,dy=(e.clientY-this.drag.startY)/scale;
+    if(this.drag.mode==='move'){
+      obj.x=clamp(this.drag.x+dx,-obj.w+20,1580);obj.y=clamp(this.drag.y+dy,-obj.h+20,880);
+    }else if(this.drag.mode==='resize'){
+      const minW=obj.kind==='graph'?320:obj.kind==='text'?120:obj.kind==='image'?80:40;
+      const minH=obj.kind==='graph'?240:obj.kind==='text'?50:obj.kind==='image'?60:20;
+      if(obj.kind==='image'){
+        const aspect=Math.max(.05,this.drag.aspect||1);
+        if(Math.abs(dx)>=Math.abs(dy)){
+          obj.w=Math.max(minW,this.drag.w+dx);obj.h=Math.max(minH,obj.w/aspect);obj.w=obj.h*aspect;
+        }else{
+          obj.h=Math.max(minH,this.drag.h+dy);obj.w=Math.max(minW,obj.h*aspect);obj.h=obj.w/aspect;
+        }
+      }else{
+        obj.w=Math.max(minW,this.drag.w+dx);obj.h=Math.max(minH,this.drag.h+dy);
+      }
+      if(obj.kind==='text')obj.fontSize=clamp(Math.round(32*obj.h/100),14,96);
+    }else if(this.drag.mode==='rotate'){
+      const rect=this.layer.getBoundingClientRect(),cx=rect.left+this.drag.center.x*scale,cy=rect.top+this.drag.center.y*scale;obj.rotation=Math.atan2(e.clientY-cy,e.clientX-cx)*180/Math.PI+90;
+    }
+    this.render();
+  }
   pointerUp(){if(!this.drag)return;this.drag=null;this.changed();}
   changed(){this.render();this.onChange?.();}
 }
