@@ -61,6 +61,11 @@ else {
 const shapes=exists('src/objects/shapes.js')?read('src/objects/shapes.js'):'';
 if(!/curtain\s*:\s*['"]Шторка['"]/.test(shapes)) fail('У shape registry відсутня редагована Шторка.');
 
+const laser=exists('src/tools/laser.js')?read('src/tools/laser.js'):'';
+if(!/pointerdown/.test(laser)||!/pointermove/.test(laser)||!/pointerup/.test(laser)) fail('Laser module має обробляти pointerdown/pointermove/pointerup.');
+if(!/laser-active/.test(laser)||!/laserDot/.test(laser)) fail('Laser module не має повного activation/overlay контракту.');
+if(/setPointerCapture/.test(laser)) fail('Laser module не повинен залежати від setPointerCapture — це нестабільно на touch/browser smoke.');
+
 const requiredModules = [
   'src/app.js','src/core/state.js','src/core/storage.js','src/core/history.js','src/core/scene.js',
   'src/core/export-png.js','src/core/export-bind.js','src/tools/laser.js','src/ui/mobile-drawer.js',
