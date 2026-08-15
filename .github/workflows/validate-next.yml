@@ -60,3 +60,20 @@ jobs:
             echo 'Legacy text prompt must not return.'
             exit 1
           fi
+
+      - name: Check page rename dialog contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'id="renamePageDialog"' preview.html
+          grep -q 'id="renamePageForm"' preview.html
+          grep -q 'id="renamePageInput"' preview.html
+          grep -q 'id="renamePageCancelBtn"' preview.html
+          grep -q 'id="renamePageSaveBtn"' preview.html
+          grep -q 'bindPageRename' src/app.js
+          grep -q 'showModal' src/app.js
+          grep -q '\.page-name-dialog' css/touch.css
+          if grep -q "prompt('Назва сторінки:" src/app.js; then
+            echo 'Legacy page rename prompt must not return.'
+            exit 1
+          fi
