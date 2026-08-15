@@ -1,3 +1,5 @@
+import { normalizeZoom } from './scene.js';
+
 const STORAGE_KEY = 'teacherboard.v2';
 const LEGACY_KEY = 'teacherboard.v1';
 const MIGRATION_FLAG = 'teacherboard.v2.migratedFromV1';
@@ -122,7 +124,7 @@ export function normalizeStoredState(data,fallback){
     tool,
     color:typeof data.color==='string'?data.color:(fallback.color||'#245d55'),
     lineWidth:clamp(data.lineWidth,1,40,finite(fallback.lineWidth,4)),
-    zoom:finite(data.zoom,1),
+    zoom:normalizeZoom(data.zoom),
     activePage,
     pages,
     gesture:null,
