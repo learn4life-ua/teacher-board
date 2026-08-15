@@ -67,6 +67,12 @@ if(button&&scene&&dot){
 
   button.addEventListener('click',()=>setActive(!active));
 
+  // If another module changes the toolbar state (for example after adding a graph
+  // from the side panel), keep the internal laser state synchronized with it.
+  new MutationObserver(()=>{
+    if(active&&!button.classList.contains('active'))setActive(false);
+  }).observe(button,{attributes:true,attributeFilter:['class']});
+
   // Laser is an exclusive presentation tool. Choosing any normal board tool or
   // geometry instrument must release it before that control handles the click.
   document.addEventListener('click',e=>{
