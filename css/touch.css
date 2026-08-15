@@ -18,3 +18,15 @@
   color:#9a3a3a;
   font-weight:700;
 }
+
+@media (pointer:coarse){
+  .object-handle{width:24px;height:24px}
+  .resize-handle{right:-16px;bottom:-16px}
+  .rotate-handle{top:-42px;width:32px;height:32px;font-size:17px}
+  .object-delete{right:-18px;top:-20px;width:34px;height:34px;font-size:24px;line-height:32px}
+  .geometry-close{width:34px;height:34px;right:-16px;top:-18px}
+  .geometry-rotate{width:32px;height:32px;top:-42px}
+  .geometry-resize,.geometry-angle,.geometry-radius{width:26px;height:26px}
+  .geometry-resize{right:-14px;bottom:-14px}
+  .geometry-action{min-height:36px;padding:8px 12px}
+}
