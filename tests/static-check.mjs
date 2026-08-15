@@ -40,7 +40,7 @@ else {
     'scene','boardViewport','drawingCanvas','objectLayer','instrumentLayer','laserDot',
     'shapeMenu','shapeBtn','textBtn','imageBtn','imageInput','laserBtn',
     'undoBtn','redoBtn','deleteBtn','zoomInBtn','zoomOutBtn','zoomLabel','savePngBtn',
-    'duplicatePageBtn','clearPageBtn','fullscreenBtn',
+    'duplicatePageBtn','renamePageBtn','deletePageBtn','clearPageBtn','fullscreenBtn',
     'pages','addPageBtn','autosaveState','sidePanel','mobilePanelBtn','closeSidePanelBtn','panelScrim',
     'textValue','symbolButtons','addTextBtn','updateTextBtn',
     'graphExpression','graphXMin','graphXMax','graphYMin','graphYMax','graphStep','addGraphBtn','updateGraphBtn'
@@ -49,14 +49,15 @@ else {
     const re = new RegExp(`id=["']${id}["']`);
     if (!re.test(html)) fail(`preview.html: відсутній #${id}`);
   }
-  if (!/type=["']module["'][^>]+src=["']src\/app\.js["']/.test(html) && !/src=["']src\/app\.js["'][^>]+type=["']module["']/.test(html)) {
-    fail('preview.html: src/app.js має бути підключений як ES module.');
-  }
+  if (!/type=["']module["'][^>]+src=["']src\/app\.js["']/.test(html) && !/src=["']src\/app\.js["'][^>]+type=["']module["']/.test(html)) fail('preview.html: src/app.js має бути підключений як ES module.');
   if (!/src=["']src\/core\/export-bind\.js["']/.test(html)) fail('preview.html: не підключено PNG export binder.');
   if (!/src=["']src\/tools\/laser\.js["']/.test(html)) fail('preview.html: не підключено laser module.');
   if (!/src=["']src\/ui\/mobile-drawer\.js["']/.test(html)) fail('preview.html: не підключено touch-safe mobile drawer module.');
   if (/\b(?:v2|v3|fixes-v\d+)\.js\b/.test(html)) fail('preview.html не повинен підключати legacy patch-файли.');
 }
+
+const app=exists('src/app.js')?read('src/app.js'):'';
+if(!/renamePageBtn/.test(app)||!/deletePageBtn/.test(app)) fail('Page management controls не підключені в src/app.js.');
 
 const shapes=exists('src/objects/shapes.js')?read('src/objects/shapes.js'):'';
 if(!/curtain\s*:\s*['"]Шторка['"]/.test(shapes)) fail('У shape registry відсутня редагована Шторка.');
