@@ -13,6 +13,10 @@ const instruments=code.indexOf('await drawInstruments(ctx,instrumentLayer)');
 if([background,canvas,objects,instruments].some(i=>i<0)||!(background<canvas&&canvas<objects&&objects<instruments)){
   fail('PNG layer order must be background → drawing canvas → objects → instruments.');
 }
+if(!code.includes("if(bg==='coords')")) fail('PNG export must have a coordinate-background renderer.');
+if(!code.includes('ctx.moveTo(WIDTH/2,0);ctx.lineTo(WIDTH/2,HEIGHT)')) fail('Coordinate PNG background must include the central vertical axis.');
+if(!code.includes('ctx.moveTo(0,HEIGHT/2);ctx.lineTo(WIDTH,HEIGHT/2)')) fail('Coordinate PNG background must include the central horizontal axis.');
+if(!code.includes("ctx.strokeStyle='#76998e';ctx.lineWidth=2")) fail('Coordinate PNG axes must stay visually distinct from the grid.');
 if(!code.includes("objectLayer.querySelectorAll('.scene-object')")) fail('PNG export must render all scene objects.');
 if(!code.includes("instrumentLayer.querySelectorAll('.geometry-tool')")) fail('PNG export must render visible geometry tools.');
 if(!code.includes("el.classList.contains('text-object')")) fail('PNG export must have a dedicated text renderer.');
@@ -29,4 +33,4 @@ if(errors.length){
   for(const error of errors) console.error(`- ${error}`);
   process.exit(1);
 }
-console.log('TeacherBoard export contract: OK (1600×900, correct layer order, content-only renderers)');
+console.log('TeacherBoard export contract: OK (1600×900, coordinate axes, correct layer order, content-only renderers)');
