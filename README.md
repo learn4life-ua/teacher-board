@@ -33,7 +33,7 @@ TeacherBoard — браузерна інтерактивна дошка для �
 1. `Validate TeacherBoard Next` — синтаксис JavaScript, import-шляхи, модулі та DOM-контракт.
 2. `Browser Smoke TeacherBoard Next` — реальний Chromium у трьох сценаріях: desktop, touch-tablet та Android/Pixel.
 
-Browser smoke уже підтвердив:
+Browser smoke підтверджує:
 - закрите меню фігур на старті;
 - створення object-layer фігури;
 - текст і графік;
@@ -43,7 +43,7 @@ Browser smoke уже підтвердив:
 - реальне завантаження PNG;
 - проходження desktop, tablet та Android сценаріїв без page/console errors.
 
-Перед заміною `index.html` залишається короткий ручний touch-тест на фізичному Android/планшеті. Детальна матриця — `docs/TESTING.md`.
+Перед заміною `index.html` потрібен короткий ручний touch-тест на фізичному Android/планшеті, особливо drag/resize/rotate геометричних інструментів та поведінки екранної клавіатури. Детальна матриця — `docs/TESTING.md`.
 
 ## Структура Next
 
