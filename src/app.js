@@ -36,13 +36,20 @@ async function clearPage(){const page=activePage(state);const hasContent=page.st
 async function toggleFullscreen(){try{if(!document.fullscreenElement)await document.documentElement.requestFullscreen?.();else await document.exitFullscreen?.();}catch(err){console.warn('Fullscreen unavailable',err);showNotice('Повноекранний режим недоступний у цьому браузері.',{type:'error'});}}
 
 function buildShapeMenu(){shapeMenu.innerHTML=Object.entries(SHAPE_LABELS).map(([key,label])=>`<button type="button" data-shape="${key}">${label}</button>`).join('');shapeMenu.addEventListener('click',e=>{const b=e.target.closest('[data-shape]');if(!b)return;state.tool=`shape:${b.dataset.shape}`;$$('.tool').forEach(x=>x.classList.remove('active'));$('#shapeBtn').classList.add('active');sceneEl.dataset.tool='shape';shapeMenu.hidden=true;});}
-function cancelShapeGesture(){if(!shapeGesture)return;shapeGesture=null;$('#shapePreview').hidden=true;}
+function cancelShapeGesture(e){if(!shapeGesture)return;if(e?.pointerId!==undefined&&shapeGesture.pointerId!==null&&e.pointerId!==shapeGesture.pointerId)return;shapeGesture=null;$('#shapePreview').hidden=true;}
+function createGestureShape(type,start,end){
+  const dx=end.x-start.x,dy=end.y-start.y,length=Math.hypot(dx,dy),angle=Math.atan2(dy,dx)*180/Math.PI;
+  if(type==='line')return objectManager.addShape('segment',{x:(start.x+end.x)/2-length/2,y:(start.y+end.y)/2-10,w:length,h:20},{minW:8,minH:20,rotation:angle});
+  if(type==='arrow')return objectManager.addShape('arrow',{x:(start.x+end.x)/2-length/2,y:(start.y+end.y)/2-10,w:length,h:20},{minW:8,minH:20,rotation:angle});
+  const x=Math.min(start.x,end.x),y=Math.min(start.y,end.y),w=Math.abs(dx),h=Math.abs(dy);
+  return objectManager.addShape(type,{x,y,w,h});
+}
 function bindShapeDrawing(){
   sceneEl.addEventListener('pointerdown',e=>{
-    if(!state.tool.startsWith('shape:')||e.target.closest('.scene-object,.geometry-tool'))return;
+    if(shapeGesture||!state.tool.startsWith('shape:')||e.target.closest('.scene-object,.geometry-tool'))return;
     e.preventDefault();
     const p=scene.pointFromEvent(e);
-    shapeGesture={start:p,end:p,pointerId:e.pointerId??null};
+    shapeGesture={start:p,end:p,pointerId:e.pointerId??null,type:state.tool.slice(6)};
     updateShapePreview();
   });
   sceneEl.addEventListener('pointermove',e=>{
@@ -54,18 +61,17 @@ function bindShapeDrawing(){
   window.addEventListener('pointerup',e=>{
     if(!shapeGesture)return;
     if(shapeGesture.pointerId!==null&&e?.pointerId!==undefined&&e.pointerId!==shapeGesture.pointerId)return;
-    const{start,end}=shapeGesture,type=state.tool.split(':')[1];
-    const dx=end.x-start.x,dy=end.y-start.y;
+    const{start,end,type}=shapeGesture;
+    const distance=Math.hypot(end.x-start.x,end.y-start.y);
     $('#shapePreview').hidden=true;
     shapeGesture=null;
-    if(Math.hypot(dx,dy)<MIN_SHAPE_GESTURE)return;
-    const x=Math.min(start.x,end.x),y=Math.min(start.y,end.y),w=Math.abs(dx),h=Math.abs(dy);
-    const obj=objectManager.addShape(type,{x,y,w,h});
+    if(distance<MIN_SHAPE_GESTURE)return;
+    const obj=createGestureShape(type,start,end);
     setTool('select');
     objectManager.select(obj.id);
   });
   window.addEventListener('pointercancel',cancelShapeGesture);
-  window.addEventListener('blur',cancelShapeGesture);
+  window.addEventListener('blur',()=>cancelShapeGesture());
 }
 function updateShapePreview(){const p=$('#shapePreview'),{start,end}=shapeGesture;p.hidden=false;p.style.left=`${Math.min(start.x,end.x)}px`;p.style.top=`${Math.min(start.y,end.y)}px`;p.style.width=`${Math.abs(end.x-start.x)}px`;p.style.height=`${Math.abs(end.y-start.y)}px`;}
 
