@@ -41,3 +41,16 @@ jobs:
 
       - name: Check zoom coordinate contract
         run: node tests/zoom-check.mjs
+
+      - name: Check object edit panel contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'objectedit' src/objects/object-manager.js
+          grep -q 'class="object-edit"' src/objects/object-manager.js
+          grep -q 'bindObjectEditing' src/app.js
+          grep -q '\.object-edit' css/touch.css
+          if grep -q 'Редагувати текст:' src/objects/object-manager.js; then
+            echo 'Legacy text prompt must not return.'
+            exit 1
+          fi
