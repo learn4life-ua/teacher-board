@@ -17,6 +17,7 @@ export function shapeSvg(obj) {
   const wrap = body => `<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${body}</svg>`;
 
   switch (obj.shape) {
+    case 'segment': return wrap(`<line x1="2" y1="50" x2="98" y2="50" ${stroke}/>`);
     case 'line': return wrap(`<line x1="3" y1="97" x2="97" y2="3" ${stroke}/>`);
     case 'rect': return wrap(`<rect x="3" y="3" width="94" height="94" ${stroke}/>`);
     case 'ellipse': return wrap(`<ellipse cx="50" cy="50" rx="47" ry="47" ${stroke}/>`);
