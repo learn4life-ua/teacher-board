@@ -9,7 +9,7 @@ GitHub Actions виконує два незалежні контури пере�
 - `Validate TeacherBoard Next` — синтаксис JavaScript, import-шляхи, критичні модулі та DOM-контракт `preview.html`;
 - `Browser Smoke TeacherBoard Next` — реальний Chromium для desktop, tablet touch та Android/Pixel viewport.
 
-Останній browser smoke успішно перевірив:
+Успішний browser smoke перевіряє:
 - меню фігур закрите на старті;
 - створення фігури як `.scene-object`;
 - створення тексту та графіка;
@@ -105,13 +105,13 @@ GitHub Actions виконує два незалежні контури пере�
 
 ### Android phone
 - [x] Pixel/Android Playwright browser smoke проходить.
-- [x] Drawer автоматично враховує `visualViewport` і блокує прокрутку сторінки під час введення.
+- [x] Drawer враховує `visualViewport`, а основна сторінка блокує scroll, поки drawer відкритий.
 - [ ] На фізичному Android перевірити екранну клавіатуру, drawer і drag пальцем.
 
 ## 10. Перед merge
 
 - [x] GitHub Actions `Validate TeacherBoard Next` зелений.
-- [x] `Browser Smoke TeacherBoard Next` проходить desktop/tablet/Android.
+- [x] `Browser Smoke TeacherBoard Next` має успішний desktop/tablet/Android прогін.
 - [x] `preview.html` не підключає `v2.js`, `v3.js` або `fixes-*`.
 - [ ] Пройти короткий фізичний touch-тест.
 - [ ] Після ручної перевірки створити окремий commit із заміною `index.html`.
