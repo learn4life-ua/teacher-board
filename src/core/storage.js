@@ -64,7 +64,7 @@ function normalizeObject(obj) {
   if (copy.kind === 'shape') {
     normalizeNumberLine(copy);
     if (!SHAPE_TYPES.has(copy.shape)) return null;
-    if(copy.shape==='circle'){
+    if(['circle','circleArc'].includes(copy.shape)){
       const side=clamp(Math.max(copy.w,copy.h),40,Math.min(MAX_OBJECT_W,MAX_OBJECT_H),160);
       copy.w=side;
       copy.h=side;
