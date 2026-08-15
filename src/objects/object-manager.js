@@ -7,6 +7,23 @@ import { textMarkup } from './text.js';
 import { createImageObject, imageMarkup } from './images.js';
 
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+const MAX_OBJECT_W = 3200;
+const MAX_OBJECT_H = 1800;
+
+function aspectBox({width,height,ratio,minW,minH,maxW=MAX_OBJECT_W,maxH=MAX_OBJECT_H,preferWidth=true}){
+  let w=Math.max(minW,Number(width)||minW),h=Math.max(minH,Number(height)||minH);
+  const r=Math.max(.05,Number(ratio)||1);
+  if(preferWidth){
+    w=Math.max(minW,w);h=w/r;
+    if(h<minH){h=minH;w=h*r;}
+  }else{
+    h=Math.max(minH,h);w=h*r;
+    if(w<minW){w=minW;h=w/r;}
+  }
+  if(w>maxW){w=maxW;h=w/r;}
+  if(h>maxH){h=maxH;w=h*r;}
+  return {w,h};
+}
 
 export function resizeObjectDimensions({kind,shape,startW,startH,dx,dy,rotation=0,aspect=startW/Math.max(1,startH)}){
   const local=sceneDeltaToLocalAxes(dx,dy,rotation),rdx=local.x,rdy=local.y;
@@ -14,19 +31,12 @@ export function resizeObjectDimensions({kind,shape,startW,startH,dx,dy,rotation=
   const circle=kind==='shape'&&shape==='circle';
   const minW=kind==='graph'?320:kind==='text'?120:kind==='image'?80:directed?8:40;
   const minH=kind==='graph'?240:kind==='text'?50:kind==='image'?60:directed?20:circle?40:20;
-  if(directed)return {w:Math.max(minW,startW+rdx),h:startH,local};
-  let w=Math.max(minW,startW+rdx),h=Math.max(minH,startH+rdy);
+  if(directed)return {w:clamp(startW+rdx,minW,MAX_OBJECT_W),h:clamp(startH,minH,120),local};
+  let w=clamp(startW+rdx,minW,MAX_OBJECT_W),h=clamp(startH+rdy,minH,MAX_OBJECT_H);
   if(kind==='image'||circle){
     const ratio=circle?1:Math.max(.05,Number(aspect)||1);
-    if(Math.abs(rdx)>=Math.abs(rdy)){
-      w=Math.max(minW,startW+rdx);
-      h=Math.max(minH,w/ratio);
-      w=h*ratio;
-    }else{
-      h=Math.max(minH,startH+rdy);
-      w=Math.max(minW,h*ratio);
-      h=w/ratio;
-    }
+    const constrained=aspectBox({width:w,height:h,ratio,minW,minH,maxW:circle?MAX_OBJECT_H:MAX_OBJECT_W,maxH:MAX_OBJECT_H,preferWidth:Math.abs(rdx)>=Math.abs(rdy)});
+    w=constrained.w;h=constrained.h;
   }
   return {w,h,local};
 }
@@ -35,15 +45,15 @@ export class ObjectManager {
   constructor({ state, layer, onChange }) { this.state=state; this.layer=layer; this.onChange=onChange; this.drag=null; this.bindGlobalPointerEvents(); }
   get objects() { return activePage(this.state).objects; }
 
-  createShape(shape, box, options={}) { return { id:uid('shape'), kind:'shape', shape, x:box.x, y:box.y, w:Math.max(options.minW??40,box.w), h:Math.max(options.minH??40,box.h), rotation:options.rotation??0, color:options.color||this.state.color, lineWidth:options.lineWidth||this.state.lineWidth }; }
+  createShape(shape, box, options={}) { return { id:uid('shape'), kind:'shape', shape, x:box.x, y:box.y, w:clamp(box.w,options.minW??40,MAX_OBJECT_W), h:clamp(box.h,options.minH??40,MAX_OBJECT_H), rotation:options.rotation??0, color:options.color||this.state.color, lineWidth:options.lineWidth||this.state.lineWidth }; }
   addShape(shape, box, options={}) { pushHistory(this.state); const obj=this.createShape(shape,box,options); this.objects.push(obj); this.state.selection=obj.id; this.changed(); return obj; }
   addGraph(expression='x') { pushHistory(this.state); const obj=createGraphObject(this.state,expression); this.objects.push(obj); this.state.selection=obj.id; this.changed(); return obj; }
   addText(text, options={}) { pushHistory(this.state); const obj={ id:uid('text'), kind:'text', text:String(text||'Текст'), x:options.x??360,y:options.y??180,w:options.w??420,h:options.h??100,rotation:0,color:options.color||this.state.color,fontSize:options.fontSize||32 }; this.objects.push(obj); this.state.selection=obj.id; this.changed(); return obj; }
   addImage(src, naturalWidth=800, naturalHeight=600) { pushHistory(this.state); const obj=createImageObject(src,naturalWidth,naturalHeight); this.objects.push(obj); this.state.selection=obj.id; this.changed(); return obj; }
   addSegment(a,b,options={}) { return this.addSegments([{a,b}],options)[0]; }
-  addSegments(segments,options={}) { if(!segments.length)return[]; pushHistory(this.state); const created=segments.map(({a,b})=>{ const dx=b.x-a.x,dy=b.y-a.y,length=Math.max(8,Math.hypot(dx,dy)),angle=Math.atan2(dy,dx)*180/Math.PI; const obj=this.createShape('segment',{x:(a.x+b.x)/2-length/2,y:(a.y+b.y)/2-10,w:length,h:20},{minW:8,minH:20,rotation:angle,color:options.color,lineWidth:options.lineWidth}); this.objects.push(obj); return obj; }); this.state.selection=created.at(-1)?.id||null; this.changed(); return created; }
-  addCircle(center,radius,options={}) { const r=Math.max(12,radius); return this.addShape('circle',{x:center.x-r,y:center.y-r,w:r*2,h:r*2},{minW:24,minH:24,color:options.color,lineWidth:options.lineWidth}); }
-  addArc(center,radius,startDeg,endDeg,options={}) { pushHistory(this.state); const r=Math.max(12,radius); const obj={ id:uid('arc'),kind:'shape',shape:'circleArc',x:center.x-r,y:center.y-r,w:r*2,h:r*2,rotation:Number(options.rotation)||0,color:options.color||this.state.color,lineWidth:options.lineWidth||this.state.lineWidth,startDeg,endDeg }; this.objects.push(obj); this.state.selection=obj.id; this.changed(); return obj; }
+  addSegments(segments,options={}) { if(!segments.length)return[]; pushHistory(this.state); const created=segments.map(({a,b})=>{ const dx=b.x-a.x,dy=b.y-a.y,length=clamp(Math.hypot(dx,dy),8,MAX_OBJECT_W),angle=Math.atan2(dy,dx)*180/Math.PI; const obj=this.createShape('segment',{x:(a.x+b.x)/2-length/2,y:(a.y+b.y)/2-10,w:length,h:20},{minW:8,minH:20,rotation:angle,color:options.color,lineWidth:options.lineWidth}); this.objects.push(obj); return obj; }); this.state.selection=created.at(-1)?.id||null; this.changed(); return created; }
+  addCircle(center,radius,options={}) { const r=clamp(radius,12,MAX_OBJECT_H/2); return this.addShape('circle',{x:center.x-r,y:center.y-r,w:r*2,h:r*2},{minW:24,minH:24,color:options.color,lineWidth:options.lineWidth}); }
+  addArc(center,radius,startDeg,endDeg,options={}) { pushHistory(this.state); const r=clamp(radius,12,MAX_OBJECT_H/2); const obj={ id:uid('arc'),kind:'shape',shape:'circleArc',x:center.x-r,y:center.y-r,w:r*2,h:r*2,rotation:Number(options.rotation)||0,color:options.color||this.state.color,lineWidth:options.lineWidth||this.state.lineWidth,startDeg,endDeg }; this.objects.push(obj); this.state.selection=obj.id; this.changed(); return obj; }
 
   selected(){return this.objects.find(o=>o.id===this.state.selection)||null;}
   select(id){const obj=this.objects.find(o=>o.id===id);this.state.selection=obj?.locked?null:(id||null);this.render();}
