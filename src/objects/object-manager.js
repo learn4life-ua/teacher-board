@@ -69,13 +69,16 @@ export class ObjectManager {
     el.querySelector('.object-delete')?.addEventListener('click',e=>{e.stopPropagation();this.deleteSelected();});
     return el;
   }
-  pointerDownObject(e,obj){if(this.state.tool!=='select'||obj.locked)return;e.preventDefault();e.stopPropagation();this.select(obj.id);const handle=e.target.closest('[data-handle]')?.dataset.handle;pushHistory(this.state);this.drag={mode:handle||'move',id:obj.id,startX:e.clientX,startY:e.clientY,x:obj.x,y:obj.y,w:obj.w,h:obj.h,aspect:obj.w/Math.max(1,obj.h),rotation:obj.rotation||0,center:{x:obj.x+obj.w/2,y:obj.y+obj.h/2}};}
+  pointerDownObject(e,obj){if(this.state.tool!=='select'||obj.locked)return;e.preventDefault();e.stopPropagation();this.select(obj.id);const handle=e.target.closest('[data-handle]')?.dataset.handle;this.drag={mode:handle||'move',id:obj.id,startX:e.clientX,startY:e.clientY,x:obj.x,y:obj.y,w:obj.w,h:obj.h,aspect:obj.w/Math.max(1,obj.h),rotation:obj.rotation||0,center:{x:obj.x+obj.w/2,y:obj.y+obj.h/2},historyPushed:false};}
   bindGlobalPointerEvents(){window.addEventListener('pointermove',e=>this.pointerMove(e));window.addEventListener('pointerup',()=>this.pointerUp());window.addEventListener('pointercancel',()=>this.pointerUp());window.addEventListener('blur',()=>this.pointerUp());}
+  ensureDragHistory(screenDx,screenDy){if(!this.drag||this.drag.historyPushed)return false;if(Math.abs(screenDx)<.5&&Math.abs(screenDy)<.5)return false;pushHistory(this.state);this.drag.historyPushed=true;return true;}
   pointerMove(e){
     if(!this.drag)return;
     const obj=this.objects.find(o=>o.id===this.drag.id);if(!obj||obj.locked)return;
+    const screenDx=e.clientX-this.drag.startX,screenDy=e.clientY-this.drag.startY;
+    if(!this.ensureDragHistory(screenDx,screenDy))return;
     const scale=this.state.zoom||1;
-    const delta=sceneDeltaFromClient(e.clientX-this.drag.startX,e.clientY-this.drag.startY,scale),dx=delta.x,dy=delta.y;
+    const delta=sceneDeltaFromClient(screenDx,screenDy,scale),dx=delta.x,dy=delta.y;
     if(this.drag.mode==='move'){
       obj.x=clamp(this.drag.x+dx,-obj.w+20,1580);obj.y=clamp(this.drag.y+dy,-obj.h+20,880);
     }else if(this.drag.mode==='resize'){
@@ -87,6 +90,6 @@ export class ObjectManager {
     }
     this.render();
   }
-  pointerUp(){if(!this.drag)return;this.drag=null;this.changed();}
+  pointerUp(){if(!this.drag)return;const changed=this.drag.historyPushed;this.drag=null;if(changed)this.changed();}
   changed(){this.render();this.onChange?.();}
 }
