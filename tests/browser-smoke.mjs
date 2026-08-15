@@ -169,6 +169,24 @@ async function geometryExtras(page){
   console.log('[desktop] geometry constructions ok');
 }
 
+async function pageActions(page,name,beforePages){
+  await page.click('#addPageBtn');
+  assert.equal(await page.locator('.page-tab').count(),beforePages+1,`${name}: page was not added`);
+  await page.click('#duplicatePageBtn');
+  assert.equal(await page.locator('.page-tab').count(),beforePages+2,`${name}: page was not duplicated`);
+
+  page.once('dialog',dialog=>dialog.accept('Урок — тест'));
+  await page.click('#renamePageBtn');
+  assert.match(await page.locator('.page-tab.active').innerText(),/Урок — тест/,`${name}: active page was not renamed`);
+
+  page.once('dialog',dialog=>dialog.accept());
+  await page.click('#deletePageBtn');
+  assert.equal(await page.locator('.page-tab').count(),beforePages+1,`${name}: page was not deleted`);
+  assert.equal((await page.locator('.page-tab.active').innerText()).includes('Урок — тест'),false,`${name}: deleted page is still active`);
+  assert.equal(await page.locator('#deletePageBtn').isDisabled(),false,`${name}: delete page button unexpectedly disabled with multiple pages`);
+  console.log(`[${name}] page add/duplicate/rename/delete ok`);
+}
+
 async function runCase(name,contextOptions={}){
   console.log(`[${name}] start`);
   const browser=await chromium.launch({headless:true});
@@ -222,11 +240,7 @@ async function runCase(name,contextOptions={}){
     }
 
     const beforePages=await page.locator('.page-tab').count();
-    await page.click('#addPageBtn');
-    assert.equal(await page.locator('.page-tab').count(),beforePages+1,`${name}: page was not added`);
-    await page.click('#duplicatePageBtn');
-    assert.equal(await page.locator('.page-tab').count(),beforePages+2,`${name}: page was not duplicated`);
-    console.log(`[${name}] pages ok`);
+    await pageActions(page,name,beforePages);
 
     if(name==='desktop'){
       const pending=page.waitForEvent('download',{timeout:15000});
