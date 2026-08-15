@@ -13,3 +13,8 @@
 .geometry-tool{
   -webkit-tap-highlight-color:transparent;
 }
+
+#autosaveState[data-status="error"]{
+  color:#9a3a3a;
+  font-weight:700;
+}
