@@ -31,6 +31,35 @@
   box-shadow:0 1px 4px rgba(0,0,0,.22);
 }
 
+.page-name-dialog{
+  width:min(420px,calc(100vw - 32px));
+  border:0;
+  border-radius:16px;
+  padding:0;
+  box-shadow:0 20px 60px rgba(20,45,38,.28);
+  color:#183c34;
+  background:#fff;
+}
+.page-name-dialog::backdrop{background:rgba(13,31,27,.38)}
+.page-name-dialog form{display:grid;gap:14px;padding:22px}
+.page-name-dialog h2{margin:0;font-size:20px}
+.page-name-dialog label{font-size:13px;font-weight:700;color:#52645f}
+.page-name-dialog input{
+  width:100%;
+  min-height:44px;
+  box-sizing:border-box;
+  border:1px solid #b9cbc5;
+  border-radius:10px;
+  padding:10px 12px;
+  font:inherit;
+  font-size:16px;
+  outline:none;
+}
+.page-name-dialog input:focus{border-color:#2f7c69;box-shadow:0 0 0 3px rgba(47,124,105,.14)}
+.dialog-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:4px}
+.dialog-actions button{min-height:42px;padding:9px 16px;border-radius:10px;border:1px solid #b9cbc5;background:#fff;font:inherit;font-weight:700}
+#renamePageSaveBtn{border-color:#2f7c69;background:#2f7c69;color:#fff}
+
 #autosaveState[data-status="error"]{
   color:#9a3a3a;
   font-weight:700;
@@ -47,4 +76,6 @@
   .geometry-resize,.geometry-angle,.geometry-radius{width:26px;height:26px}
   .geometry-resize{right:-14px;bottom:-14px}
   .geometry-action{min-height:36px;padding:8px 12px}
+  .dialog-actions button{min-height:48px;padding-inline:18px}
+  .page-name-dialog input{min-height:50px}
 }
