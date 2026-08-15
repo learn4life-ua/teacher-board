@@ -7,12 +7,14 @@ export function normalizeZoom(value) {
   return Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.round(numeric * 100) / 100));
 }
 
-export function scenePointFromClient({ clientX, clientY, rectLeft, rectTop, zoom = 1 }) {
+export function sceneDeltaFromClient(dx, dy, zoom = 1) {
   const z = normalizeZoom(zoom) || 1;
-  return {
-    x: (clientX - rectLeft) / z,
-    y: (clientY - rectTop) / z
-  };
+  return { x: dx / z, y: dy / z };
+}
+
+export function scenePointFromClient({ clientX, clientY, rectLeft, rectTop, zoom = 1 }) {
+  const delta = sceneDeltaFromClient(clientX - rectLeft, clientY - rectTop, zoom);
+  return { x: delta.x, y: delta.y };
 }
 
 export class Scene {
