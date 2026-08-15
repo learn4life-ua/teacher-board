@@ -25,6 +25,10 @@
         <button class="tool" data-tool="marker"><span>▰</span><em>Маркер</em></button>
         <button class="tool" data-tool="eraser"><span>⌫</span><em>Гумка</em></button>
         <button class="tool" id="shapeBtn"><span>◇</span><em>Фігури</em></button>
+        <hr>
+        <button class="tool instrument-btn" data-instrument="ruler"><span>▰</span><em>Лінійка</em></button>
+        <button class="tool instrument-btn" data-instrument="protractor"><span>◒</span><em>Транспортир</em></button>
+        <button class="tool instrument-btn" data-instrument="compass"><span>⋀</span><em>Циркуль</em></button>
         <div class="tool-options">
           <input id="colorPicker" type="color" value="#245d55" title="Колір">
           <select id="lineWidth" title="Товщина"><option value="2">2 px</option><option value="4" selected>4 px</option><option value="6">6 px</option><option value="10">10 px</option></select>
@@ -36,6 +40,7 @@
           <div class="scene" id="scene" data-background="clean" data-tool="select">
             <canvas id="drawingCanvas" width="1600" height="900"></canvas>
             <div class="object-layer" id="objectLayer"></div>
+            <div class="instrument-layer" id="instrumentLayer"></div>
             <div class="shape-preview" id="shapePreview" hidden></div>
           </div>
         </div>
@@ -49,7 +54,7 @@
           <button class="background-btn" data-bg="lines">Лінії</button>
           <button class="background-btn" data-bg="coords">Координатна</button>
         </div>
-        <p><strong>Що вже працює:</strong> об'єктні фігури, вибір, переміщення, розмір, поворот, видалення, zoom, undo/redo, сторінки та вільне малювання.</p>
+        <p><strong>Що вже працює:</strong> об'єктні фігури, вибір, переміщення, розмір, поворот, видалення, zoom, undo/redo, сторінки, вільне малювання, лінійка, транспортир і циркуль як окремі інструменти.</p>
       </aside>
     </main>
 
