@@ -43,6 +43,7 @@
 .page-name-dialog::backdrop{background:rgba(13,31,27,.38)}
 .page-name-dialog form{display:grid;gap:14px;padding:22px}
 .page-name-dialog h2{margin:0;font-size:20px}
+.page-name-dialog p{margin:0;color:#52645f;line-height:1.45}
 .page-name-dialog label{font-size:13px;font-weight:700;color:#52645f}
 .page-name-dialog input{
   width:100%;
@@ -59,6 +60,7 @@
 .dialog-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:4px}
 .dialog-actions button{min-height:42px;padding:9px 16px;border-radius:10px;border:1px solid #b9cbc5;background:#fff;font:inherit;font-weight:700}
 #renamePageSaveBtn{border-color:#2f7c69;background:#2f7c69;color:#fff}
+.dialog-actions button.danger{border-color:#a93e3e;background:#a93e3e;color:#fff}
 
 #autosaveState[data-status="error"]{
   color:#9a3a3a;
