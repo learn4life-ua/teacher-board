@@ -54,6 +54,7 @@ else {
   }
   if (!/src=["']src\/core\/export-bind\.js["']/.test(html)) fail('preview.html: не підключено PNG export binder.');
   if (!/src=["']src\/tools\/laser\.js["']/.test(html)) fail('preview.html: не підключено laser module.');
+  if (!/src=["']src\/ui\/mobile-drawer\.js["']/.test(html)) fail('preview.html: не підключено touch-safe mobile drawer module.');
   if (/\b(?:v2|v3|fixes-v\d+)\.js\b/.test(html)) fail('preview.html не повинен підключати legacy patch-файли.');
 }
 
@@ -62,7 +63,7 @@ if(!/curtain\s*:\s*['"]Шторка['"]/.test(shapes)) fail('У shape registry �
 
 const requiredModules = [
   'src/app.js','src/core/state.js','src/core/storage.js','src/core/history.js','src/core/scene.js',
-  'src/core/export-png.js','src/core/export-bind.js','src/tools/laser.js',
+  'src/core/export-png.js','src/core/export-bind.js','src/tools/laser.js','src/ui/mobile-drawer.js',
   'src/drawing/freehand.js','src/objects/object-manager.js','src/objects/shapes.js','src/objects/text.js',
   'src/objects/images.js','src/math/graph.js','src/instruments/geometry-tools.js'
 ];
