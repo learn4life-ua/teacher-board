@@ -5,7 +5,7 @@ const baseURL = process.env.TB_URL || 'http://127.0.0.1:4173/preview.html';
 
 async function runCase(name, contextOptions = {}) {
   const browser = await chromium.launch({ headless: true });
-  const context = await browser.newContext(contextOptions);
+  const context = await browser.newContext({ acceptDownloads: true, ...contextOptions });
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', e => errors.push(String(e)));
@@ -38,6 +38,9 @@ async function runCase(name, contextOptions = {}) {
   await page.click('#addGraphBtn');
   assert.ok(await page.locator('.graph-object').count() >= 1, `${name}: graph object was not created`);
 
+  await page.locator('.instrument-btn[data-instrument="ruler"]').click();
+  assert.ok(await page.locator('.geometry-tool').count() >= 1, `${name}: ruler was not created`);
+
   const beforePages = await page.locator('.page-tab').count();
   await page.click('#addPageBtn');
   assert.equal(await page.locator('.page-tab').count(), beforePages + 1, `${name}: page was not added`);
@@ -46,8 +49,15 @@ async function runCase(name, contextOptions = {}) {
 
   if (contextOptions.viewport?.width <= 900 || contextOptions.isMobile) {
     await page.click('#mobilePanelBtn');
-    assert.equal(await page.locator('#sidePanel').evaluate(el => document.body.classList.contains('side-panel-open')), true, `${name}: mobile panel did not open`);
+    assert.equal(await page.locator('#sidePanel').evaluate(() => document.body.classList.contains('side-panel-open')), true, `${name}: mobile panel did not open`);
     await page.click('#closeSidePanelBtn');
+  }
+
+  if (name === 'desktop') {
+    const downloadPromise = page.waitForEvent('download', { timeout: 15000 });
+    await page.click('#savePngBtn');
+    const download = await downloadPromise;
+    assert.match(download.suggestedFilename(), /\.png$/i, `${name}: PNG download filename is invalid`);
   }
 
   assert.deepEqual(errors, [], `${name}: browser console/page errors: ${errors.join(' | ')}`);
