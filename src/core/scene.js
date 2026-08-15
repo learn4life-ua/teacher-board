@@ -12,6 +12,14 @@ export function sceneDeltaFromClient(dx, dy, zoom = 1) {
   return { x: dx / z, y: dy / z };
 }
 
+export function sceneDeltaToLocalAxes(dx, dy, rotation = 0) {
+  const rad = (Number(rotation) || 0) * Math.PI / 180;
+  return {
+    x: dx * Math.cos(rad) + dy * Math.sin(rad),
+    y: -dx * Math.sin(rad) + dy * Math.cos(rad)
+  };
+}
+
 export function scenePointFromClient({ clientX, clientY, rectLeft, rectTop, zoom = 1 }) {
   const delta = sceneDeltaFromClient(clientX - rectLeft, clientY - rectTop, zoom);
   return { x: delta.x, y: delta.y };
