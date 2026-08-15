@@ -2,36 +2,180 @@ import { activePage, uid } from '../core/state.js';
 import { pushHistory } from '../core/history.js';
 
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
-const MATH_TOKEN = /Math\.(?:PI|E|sin|cos|tan|sqrt|abs|exp|log)/g;
+const FUNCTIONS = {
+  sin: Math.sin,
+  cos: Math.cos,
+  tan: Math.tan,
+  sqrt: Math.sqrt,
+  abs: Math.abs,
+  exp: Math.exp,
+  ln: Math.log
+};
+const CONSTANTS = { pi: Math.PI, e: Math.E };
 
-function safeExpression(expr) {
-  const body = String(expr || 'x').trim()
-    .replace(/\bX\b/g, 'x')
-    .replaceAll('^', '**')
-    .replace(/\bpi\b/gi, 'Math.PI')
-    .replace(/\be\b/g, 'Math.E')
-    .replace(/\bsin\b/g, 'Math.sin')
-    .replace(/\bcos\b/g, 'Math.cos')
-    .replace(/\btan\b/g, 'Math.tan')
-    .replace(/\bsqrt\b/g, 'Math.sqrt')
-    .replace(/\babs\b/g, 'Math.abs')
-    .replace(/\bexp\b/g, 'Math.exp')
-    .replace(/\bln\b/g, 'Math.log');
-
-  // Remove only the Math identifiers we explicitly support. Anything alphabetic
-  // left afterwards is not a mathematical expression and must never reach Function().
-  const remainder = body.replace(MATH_TOKEN, '');
-  if (!/^[0-9x+\-*/().,\s]*$/.test(remainder)) throw new Error('Недопустимий вираз');
-  return body;
+function normalizeExpression(expr) {
+  return String(expr || 'x')
+    .trim()
+    .toLowerCase()
+    .replaceAll('π', 'pi')
+    .replaceAll('−', '-')
+    .replaceAll('–', '-')
+    .replaceAll('×', '*')
+    .replaceAll('·', '*')
+    .replaceAll('÷', '/')
+    .replace(/(\d),(\d)/g, '$1.$2');
 }
 
-function evaluator(expr) {
-  const body = safeExpression(expr);
-  const fn = new Function('x', `"use strict"; return (${body});`);
+function tokenize(expr) {
+  const source = normalizeExpression(expr);
+  const tokens = [];
+  let i = 0;
+
+  while (i < source.length) {
+    const ch = source[i];
+    if (/\s/.test(ch)) { i += 1; continue; }
+
+    if (/[0-9.]/.test(ch)) {
+      const match = source.slice(i).match(/^(?:\d+(?:\.\d*)?|\.\d+)/);
+      if (!match) throw new Error('Некоректне число');
+      const value = Number(match[0]);
+      if (!Number.isFinite(value)) throw new Error('Некоректне число');
+      tokens.push({ type: 'number', value });
+      i += match[0].length;
+      continue;
+    }
+
+    if (/[a-z]/.test(ch)) {
+      const match = source.slice(i).match(/^[a-z]+/);
+      const name = match?.[0] || '';
+      if (name === 'x') tokens.push({ type: 'variable' });
+      else if (Object.hasOwn(CONSTANTS, name)) tokens.push({ type: 'constant', value: CONSTANTS[name], name });
+      else if (Object.hasOwn(FUNCTIONS, name)) tokens.push({ type: 'function', name });
+      else throw new Error(`Невідома назва: ${name}`);
+      i += name.length;
+      continue;
+    }
+
+    if ('+-*/^()'.includes(ch)) {
+      tokens.push({ type: ch === '(' || ch === ')' ? 'paren' : 'operator', value: ch });
+      i += 1;
+      continue;
+    }
+
+    throw new Error(`Недопустимий символ: ${ch}`);
+  }
+
+  if (!tokens.length) throw new Error('Порожній вираз');
+  return insertImplicitMultiplication(tokens);
+}
+
+function canEndValue(token) {
+  return token && ['number', 'variable', 'constant'].includes(token.type)
+    || token?.type === 'paren' && token.value === ')';
+}
+
+function canStartValue(token) {
+  return token && ['number', 'variable', 'constant', 'function'].includes(token.type)
+    || token?.type === 'paren' && token.value === '(';
+}
+
+function insertImplicitMultiplication(tokens) {
+  const result = [];
+  for (const token of tokens) {
+    const prev = result.at(-1);
+    if (canEndValue(prev) && canStartValue(token)) result.push({ type: 'operator', value: '*' });
+    result.push(token);
+  }
+  return result;
+}
+
+function compileExpression(expr) {
+  const tokens = tokenize(expr);
+  let index = 0;
+  const peek = () => tokens[index];
+  const take = () => tokens[index++];
+
+  function parseExpression() { return parseAddSub(); }
+
+  function parseAddSub() {
+    let left = parseMulDiv();
+    while (peek()?.type === 'operator' && ['+', '-'].includes(peek().value)) {
+      const op = take().value;
+      const right = parseMulDiv();
+      const a = left;
+      left = x => op === '+' ? a(x) + right(x) : a(x) - right(x);
+    }
+    return left;
+  }
+
+  function parseMulDiv() {
+    let left = parseUnary();
+    while (peek()?.type === 'operator' && ['*', '/'].includes(peek().value)) {
+      const op = take().value;
+      const right = parseUnary();
+      const a = left;
+      left = x => op === '*' ? a(x) * right(x) : a(x) / right(x);
+    }
+    return left;
+  }
+
+  function parseUnary() {
+    if (peek()?.type === 'operator' && ['+', '-'].includes(peek().value)) {
+      const op = take().value;
+      const value = parseUnary();
+      return x => op === '-' ? -value(x) : value(x);
+    }
+    return parsePower();
+  }
+
+  function parsePower() {
+    let base = parsePrimary();
+    if (peek()?.type === 'operator' && peek().value === '^') {
+      take();
+      const exponent = parseUnary();
+      const a = base;
+      base = x => a(x) ** exponent(x);
+    }
+    return base;
+  }
+
+  function parsePrimary() {
+    const token = take();
+    if (!token) throw new Error('Незавершений вираз');
+    if (token.type === 'number') return () => token.value;
+    if (token.type === 'variable') return x => x;
+    if (token.type === 'constant') return () => token.value;
+
+    if (token.type === 'function') {
+      const open = take();
+      if (open?.type !== 'paren' || open.value !== '(') throw new Error('Після функції потрібні дужки');
+      const argument = parseExpression();
+      const close = take();
+      if (close?.type !== 'paren' || close.value !== ')') throw new Error('Не закрито дужку');
+      const fn = FUNCTIONS[token.name];
+      return x => fn(argument(x));
+    }
+
+    if (token.type === 'paren' && token.value === '(') {
+      const value = parseExpression();
+      const close = take();
+      if (close?.type !== 'paren' || close.value !== ')') throw new Error('Не закрито дужку');
+      return value;
+    }
+
+    throw new Error('Очікується число, x, функція або дужки');
+  }
+
+  const compiled = parseExpression();
+  if (index !== tokens.length) throw new Error('Зайві символи у виразі');
   return x => {
-    const y = Number(fn(x));
+    const y = Number(compiled(Number(x)));
     return Number.isFinite(y) ? y : NaN;
   };
+}
+
+export function evaluateExpression(expression, x) {
+  return compileExpression(expression)(x);
 }
 
 export function createGraphObject(state, expression = 'x') {
@@ -69,7 +213,7 @@ export function graphSvg(g) {
   let error = '';
 
   try {
-    const f = evaluator(g.expression);
+    const f = compileExpression(g.expression);
     let drawing = false;
     const samples = Math.max(480, Math.round(g.w));
     for (let i=0;i<=samples;i++) {
