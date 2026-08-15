@@ -11,6 +11,23 @@ if(panel&&scrim&&toggle){
 
   const clearInline=(el,props)=>props.forEach(prop=>el.style.removeProperty(prop));
   const visual=()=>window.visualViewport;
+  let lockedScrollY=0;
+
+  const lockPage=()=>{
+    if(document.body.dataset.tbScrollLocked==='1')return;
+    lockedScrollY=window.scrollY||0;
+    document.body.dataset.tbScrollLocked='1';
+    Object.assign(document.documentElement.style,{overflow:'hidden',overscrollBehavior:'none'});
+    Object.assign(document.body.style,{overflow:'hidden',overscrollBehavior:'none',position:'fixed',top:`-${lockedScrollY}px`,left:'0',right:'0',width:'100%'});
+  };
+  const unlockPage=()=>{
+    if(document.body.dataset.tbScrollLocked!=='1')return;
+    delete document.body.dataset.tbScrollLocked;
+    ['overflow','overscroll-behavior'].forEach(p=>document.documentElement.style.removeProperty(p));
+    ['overflow','overscroll-behavior','position','top','left','right','width'].forEach(p=>document.body.style.removeProperty(p));
+    window.scrollTo(0,lockedScrollY);
+  };
+
   const fitVisualViewport=()=>{
     if(!media.matches||panel.parentNode!==document.body)return;
     const vv=visual();
@@ -26,6 +43,7 @@ if(panel&&scrim&&toggle){
 
   const sync=()=>{
     if(!media.matches){
+      unlockPage();
       if(panel.parentNode!==panelHome.parentNode)panelHome.parentNode.insertBefore(panel,panelHome.nextSibling);
       if(scrim.parentNode!==scrimHome.parentNode)scrimHome.parentNode.insertBefore(scrim,scrimHome.nextSibling);
       clearInline(panel,['position','right','top','bottom','width','max-width','height','max-height','display','overflow-y','z-index','background','pointer-events','visibility','transform']);
@@ -38,9 +56,10 @@ if(panel&&scrim&&toggle){
     if(panel.parentNode!==document.body)document.body.append(scrim,panel);
     Object.assign(scrim.style,{position:'fixed',inset:'0',zIndex:'2147483000',pointerEvents:'none'});
     Object.assign(panel.style,{position:'fixed',right:'0',maxWidth:'340px',display:'block',overflowY:'auto',overscrollBehavior:'contain',zIndex:'2147483640',background:'#fff'});
-    fitVisualViewport();
 
     const open=document.body.classList.contains('side-panel-open');
+    if(open)lockPage();else unlockPage();
+    fitVisualViewport();
     panel.style.pointerEvents=open?'auto':'none';
     panel.style.visibility=open?'visible':'hidden';
     panel.style.transform=open?'translateX(0)':'translateX(105%)';
