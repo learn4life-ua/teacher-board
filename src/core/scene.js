@@ -1,10 +1,12 @@
 export const MIN_ZOOM = 0.5;
 export const MAX_ZOOM = 2;
+export const ZOOM_STEP = 0.25;
 
 export function normalizeZoom(value) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return 1;
-  return Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.round(numeric * 100) / 100));
+  const clamped = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, numeric));
+  return Math.round(clamped / ZOOM_STEP) * ZOOM_STEP;
 }
 
 export function sceneDeltaFromClient(dx, dy, zoom = 1) {
