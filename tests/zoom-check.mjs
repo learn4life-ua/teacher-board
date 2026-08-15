@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import process from 'node:process';
-import { normalizeZoom, scenePointFromClient, sceneDeltaFromClient, MIN_ZOOM, MAX_ZOOM } from '../src/core/scene.js';
+import { normalizeZoom, scenePointFromClient, sceneDeltaFromClient, sceneDeltaToLocalAxes, MIN_ZOOM, MAX_ZOOM } from '../src/core/scene.js';
 
 const errors=[];
 const fail=message=>errors.push(message);
@@ -28,6 +28,14 @@ for(const zoom of [.5,.75,1,1.25,1.5,1.75,2]){
   }
 }
 
+const local90=sceneDeltaToLocalAxes(0,120,90);
+if(!near(local90.x,120)||!near(local90.y,0)) fail('90° local-axis resize transform is incorrect.');
+const a=Math.PI/4;
+const local45=sceneDeltaToLocalAxes(80*Math.cos(a),80*Math.sin(a),45);
+if(!near(local45.x,80)||!near(local45.y,0,1e-8)) fail('45° local-axis resize transform is incorrect.');
+const cross45=sceneDeltaToLocalAxes(-50*Math.sin(a),50*Math.cos(a),45);
+if(!near(cross45.x,0,1e-8)||!near(cross45.y,50,1e-8)) fail('Local perpendicular resize axis is incorrect.');
+
 const app=fs.readFileSync('src/app.js','utf8');
 if(!/setZoom\(state\.zoom\+\.25\)/.test(app)||!/setZoom\(state\.zoom-\.25\)/.test(app)){
   fail('Toolbar zoom buttons must step by 25%.');
@@ -36,6 +44,8 @@ const objects=fs.readFileSync('src/objects/object-manager.js','utf8');
 const geometry=fs.readFileSync('src/instruments/geometry-tools.js','utf8');
 if(!objects.includes('sceneDeltaFromClient')) fail('Object drag must use the shared scene delta helper.');
 if(!geometry.includes('sceneDeltaFromClient')) fail('Geometry drag must use the shared scene delta helper.');
+if(!objects.includes('sceneDeltaToLocalAxes')) fail('Rotated object resize must use local axes.');
+if(!geometry.includes('sceneDeltaToLocalAxes')) fail('Rotated geometry resize must use local axes.');
 
 const css=fs.readFileSync('css/next.css','utf8');
 if(!/\.board-viewport\{[^}]*width:calc\(1600px \* var\(--scene-zoom,1\)\)[^}]*height:calc\(900px \* var\(--scene-zoom,1\)\)/.test(css)){
@@ -53,4 +63,4 @@ if(errors.length){
   errors.forEach(error=>console.error(`- ${error}`));
   process.exit(1);
 }
-console.log('TeacherBoard zoom check: OK (50–200%, shared logical scene)');
+console.log('TeacherBoard zoom check: OK (50–200%, shared logical scene, rotated resize axes)');
