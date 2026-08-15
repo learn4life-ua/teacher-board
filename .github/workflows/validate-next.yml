@@ -73,7 +73,7 @@ jobs:
           grep -q 'bindPageRename' src/app.js
           grep -q 'showModal' src/app.js
           grep -q '\.page-name-dialog' css/touch.css
-          if grep -q "prompt('Назва сторінки:" src/app.js; then
+          if grep -Fq "prompt('Назва сторінки:" src/app.js; then
             echo 'Legacy page rename prompt must not return.'
             exit 1
           fi
@@ -87,10 +87,24 @@ jobs:
           grep -q 'data-dialog-message' preview.html
           grep -q 'data-dialog-cancel' preview.html
           grep -q 'data-dialog-confirm' preview.html
-          grep -q "import { confirmDialog } from './ui/dialogs.js'" src/app.js
+          grep -Fq "import { confirmDialog } from './ui/dialogs.js'" src/app.js
           grep -q 'confirmDialog' src/ui/dialogs.js
           grep -q 'button.danger' css/touch.css
           if grep -Eq '\bconfirm\s*\(' src/app.js; then
             echo 'Browser confirm() must not be used for destructive page actions.'
+            exit 1
+          fi
+
+      - name: Check non blocking notice contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'id="statusToast"' preview.html
+          grep -Fq "import { showNotice } from './ui/notices.js'" src/app.js
+          grep -Fq "import { showNotice } from '../ui/notices.js'" src/core/export-bind.js
+          grep -q 'showNotice' src/ui/notices.js
+          grep -q '\.status-toast' css/touch.css
+          if grep -Eq '\balert\s*\(' src/app.js src/core/export-bind.js; then
+            echo 'Blocking browser alert() must not be used in the main app or PNG export.'
             exit 1
           fi
