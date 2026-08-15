@@ -8,6 +8,7 @@ import { FreehandDrawing } from './drawing/freehand.js';
 import { GeometryTools } from './instruments/geometry-tools.js';
 import { fileToDataUrl, readImageSize } from './objects/images.js';
 import { confirmDialog } from './ui/dialogs.js';
+import { showNotice } from './ui/notices.js';
 
 let state=loadState(createState());
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
@@ -31,7 +32,7 @@ function bindPageRename(){const dialog=$('#renamePageDialog'),form=$('#renamePag
 async function deletePage(){if(state.pages.length<=1)return;const page=activePage(state);const ok=await confirmDialog($('#confirmActionDialog'),{title:'Видалити сторінку?',message:`Сторінку «${page.name}» буде видалено разом з усім її вмістом.`,confirmText:'Видалити',danger:true});if(!ok)return;state.pages.splice(state.activePage,1);state.activePage=Math.min(state.activePage,state.pages.length-1);state.selection=null;resetHistory(state);commit();}
 function duplicatePage(){const source=activePage(state);const clone=structuredClone(source);clone.id=createBlankPage().id;clone.name=`${source.name||`Сторінка ${state.activePage+1}`} — копія`;state.pages.splice(state.activePage+1,0,clone);state.activePage+=1;state.selection=null;resetHistory(state);commit();}
 async function clearPage(){const page=activePage(state);const hasContent=page.strokes.length||page.objects.length||page.instruments.length;if(!hasContent)return;const ok=await confirmDialog($('#confirmActionDialog'),{title:'Очистити сторінку?',message:'Усі штрихи, об’єкти та геометричні інструменти на поточній сторінці буде прибрано. Дію можна скасувати через Undo.',confirmText:'Очистити',danger:true});if(!ok)return;pushHistory(state);page.strokes=[];page.objects=[];page.instruments=[];state.selection=null;commit();}
-async function toggleFullscreen(){try{if(!document.fullscreenElement)await document.documentElement.requestFullscreen?.();else await document.exitFullscreen?.();}catch(err){console.warn('Fullscreen unavailable',err);}}
+async function toggleFullscreen(){try{if(!document.fullscreenElement)await document.documentElement.requestFullscreen?.();else await document.exitFullscreen?.();}catch(err){console.warn('Fullscreen unavailable',err);showNotice('Повноекранний режим недоступний у цьому браузері.',{type:'error'});}}
 
 function buildShapeMenu(){shapeMenu.innerHTML=Object.entries(SHAPE_LABELS).map(([key,label])=>`<button type="button" data-shape="${key}">${label}</button>`).join('');shapeMenu.addEventListener('click',e=>{const b=e.target.closest('[data-shape]');if(!b)return;state.tool=`shape:${b.dataset.shape}`;$$('.tool').forEach(x=>x.classList.remove('active'));$('#shapeBtn').classList.add('active');sceneEl.dataset.tool='shape';shapeMenu.hidden=true;});}
 function cancelShapeGesture(){if(!shapeGesture)return;shapeGesture=null;$('#shapePreview').hidden=true;}
@@ -40,7 +41,7 @@ function updateShapePreview(){const p=$('#shapePreview'),{start,end}=shapeGestur
 
 function graphValues(){const xMin=Number($('#graphXMin').value),xMax=Number($('#graphXMax').value),yMin=Number($('#graphYMin').value),yMax=Number($('#graphYMax').value),majorStep=Number($('#graphStep').value);if(!(xMin<xMax)||!(yMin<yMax)||!(majorStep>0))return null;return{expression:$('#graphExpression').value.trim()||'x',xMin,xMax,yMin,yMax,majorStep};}
 function syncGraphPanel(){const obj=objectManager.selected(),isGraph=obj?.kind==='graph';$('#updateGraphBtn').disabled=!isGraph;if(!isGraph||document.activeElement?.closest?.('.graph-panel'))return;$('#graphExpression').value=obj.expression||'x';$('#graphXMin').value=obj.xMin;$('#graphXMax').value=obj.xMax;$('#graphYMin').value=obj.yMin;$('#graphYMax').value=obj.yMax;$('#graphStep').value=obj.majorStep||1;}
-function bindGraphPanel(){$('#addGraphBtn').addEventListener('click',()=>{const values=graphValues();if(!values)return alert('Перевірте межі осей і крок шкали.');const graph=objectManager.addGraph(values.expression);Object.assign(graph,values);setTool('select');objectManager.select(graph.id);commit();});$('#updateGraphBtn').addEventListener('click',()=>{const obj=objectManager.selected(),values=graphValues();if(!obj||obj.kind!=='graph'||!values)return;objectManager.updateSelected(values);});}
+function bindGraphPanel(){$('#addGraphBtn').addEventListener('click',()=>{const values=graphValues();if(!values){showNotice('Перевірте межі осей і крок шкали.',{type:'error'});return;}const graph=objectManager.addGraph(values.expression);Object.assign(graph,values);setTool('select');objectManager.select(graph.id);commit();});$('#updateGraphBtn').addEventListener('click',()=>{const obj=objectManager.selected(),values=graphValues();if(!obj||obj.kind!=='graph')return;if(!values){showNotice('Перевірте межі осей і крок шкали.',{type:'error'});return;}objectManager.updateSelected(values);});}
 function syncTextPanel(){const obj=objectManager.selected(),isText=obj?.kind==='text';$('#updateTextBtn').disabled=!isText;if(isText&&!document.activeElement?.closest?.('.text-panel'))$('#textValue').value=obj.text||'';}
 function insertAtCursor(textarea,value){const start=textarea.selectionStart??textarea.value.length,end=textarea.selectionEnd??start;textarea.setRangeText(value,start,end,'end');textarea.focus();}
 function bindTextPanel(){$('#textBtn').addEventListener('click',()=>{$('#textValue').focus();openSidePanel();});$('#symbolButtons').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;insertAtCursor($('#textValue'),b.textContent||'');});$('#addTextBtn').addEventListener('click',()=>{const value=$('#textValue').value.trim();if(!value)return;const obj=objectManager.addText(value);setTool('select');objectManager.select(obj.id);});$('#updateTextBtn').addEventListener('click',()=>{const obj=objectManager.selected();if(obj?.kind==='text')objectManager.updateSelected({text:$('#textValue').value});});}
@@ -54,9 +55,9 @@ async function insertImageFile(file){
     if(!saveState(state)){
       const page=activePage(state);page.objects=page.objects.filter(item=>item.id!==obj.id);state.selection=null;
       persistState();renderAll();
-      alert('Зображення завелике для сховища браузера. Спробуйте менший файл або очистіть непотрібні сторінки.');
+      showNotice('Зображення завелике для сховища браузера. Спробуйте менший файл або очистіть непотрібні сторінки.',{type:'error',duration:5200});
     }
-  }catch(err){console.error(err);alert('Не вдалося вставити зображення.');}
+  }catch(err){console.error(err);showNotice('Не вдалося вставити зображення.',{type:'error'});}
 }
 function clipboardImageFile(data){
   const fromFiles=[...(data?.files||[])].find(file=>file.type?.startsWith('image/'));
