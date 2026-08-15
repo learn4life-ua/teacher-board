@@ -62,6 +62,10 @@ if(!/renamePageBtn/.test(app)||!/deletePageBtn/.test(app)) fail('Page management
 const shapes=exists('src/objects/shapes.js')?read('src/objects/shapes.js'):'';
 if(!/curtain\s*:\s*['"]Шторка['"]/.test(shapes)) fail('У shape registry відсутня редагована Шторка.');
 
+const drawing=exists('src/drawing/freehand.js')?read('src/drawing/freehand.js'):'';
+if(!/destination-out/.test(drawing)) fail('Гумка має стирати drawing canvas через destination-out, а не малювати білим.');
+if(/strokeStyle\s*=\s*[^;]*#ffffff/.test(drawing)) fail('Гумка не повинна використовувати білий strokeStyle — це ламає grid/coords backgrounds.');
+
 const laser=exists('src/tools/laser.js')?read('src/tools/laser.js'):'';
 if(!/pointerdown/.test(laser)||!/pointermove/.test(laser)||!/pointerup/.test(laser)) fail('Laser module має обробляти pointerdown/pointermove/pointerup.');
 if(!/laser-active/.test(laser)||!/laserDot/.test(laser)) fail('Laser module не має повного activation/overlay контракту.');
