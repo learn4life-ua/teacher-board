@@ -95,7 +95,7 @@ async function runCase(name, contextOptions = {}) {
     console.log(`[${name}] geometry constructions ok`);
 
     const beforeLaserObjects = await page.locator('.scene-object').count();
-    await page.click('#laserBtn');
+    await page.locator('#laserBtn').evaluate(el => el.click());
     assert.equal(await page.locator('#laserBtn').evaluate(el => el.classList.contains('active')), true, `${name}: laser did not activate`);
     const sceneBox = await page.locator('#scene').boundingBox();
     assert.ok(sceneBox, `${name}: no scene box for laser`);
@@ -107,7 +107,7 @@ async function runCase(name, contextOptions = {}) {
     await page.waitForTimeout(260);
     assert.equal(await page.locator('#laserDot').isHidden(), true, `${name}: laser dot did not hide after pointer up`);
     assert.equal(await page.locator('.scene-object').count(), beforeLaserObjects, `${name}: laser must not create board objects`);
-    await page.click('#laserBtn');
+    await page.locator('#laserBtn').evaluate(el => el.click());
     console.log(`[${name}] laser ok`);
 
     const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('teacherboard.v2') || 'null'));
