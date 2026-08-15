@@ -1,12 +1,11 @@
 import { activePage, uid } from '../core/state.js';
 import { pushHistory } from '../core/history.js';
-import { sceneDeltaFromClient } from '../core/scene.js';
+import { sceneDeltaFromClient, sceneDeltaToLocalAxes } from '../core/scene.js';
 
 const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
 
 export function sceneDeltaToLocal(dx,dy,rotation=0){
-  const rad=(Number(rotation)||0)*Math.PI/180;
-  return {x:dx*Math.cos(rad)+dy*Math.sin(rad),y:-dx*Math.sin(rad)+dy*Math.cos(rad)};
+  return sceneDeltaToLocalAxes(dx,dy,rotation);
 }
 
 export function protractorAngleFromPointer({pointerX,pointerY,pivotX,pivotY,rotation=0}){
@@ -18,7 +17,7 @@ export function protractorAngleFromPointer({pointerX,pointerY,pivotX,pivotY,rota
 }
 
 export function compassRadiusFromDrag({startRadius,dx,dy,rotation=0,min=30,max=120}){
-  const local=sceneDeltaToLocal(dx,dy,rotation);
+  const local=sceneDeltaToLocalAxes(dx,dy,rotation);
   return clamp((Number(startRadius)||0)+local.x,min,max);
 }
 
@@ -42,7 +41,7 @@ export class GeometryTools{
   angleHandleMarkup(item){const angle=clamp(Number(item.angle)||0,0,180),theta=angle*Math.PI/180,left=50+42*Math.cos(theta),top=90.9-76*Math.sin(theta);return `<span class="geometry-angle" data-handle="angle" style="left:${left}%;top:${top}%" title="Кут ${Math.round(angle)}°"></span>`;}
   compassControls(item){const left=compassRightPercent(item);return `<span class="geometry-radius" data-handle="radius" style="left:${left}%;top:90%" title="Радіус ${Math.round(item.radius||92)}"></span><div class="compass-modes"><button type="button" class="compass-mode${item.mode!=='arc'?' active':''}" data-mode="circle">Коло</button><button type="button" class="compass-mode${item.mode==='arc'?' active':''}" data-mode="arc">Дуга</button></div>`;}
   pointerDown(e,item){e.preventDefault();e.stopPropagation();const handle=e.target.closest('[data-handle]')?.dataset.handle||'move';pushHistory(this.state);this.drag={id:item.id,mode:handle,startX:e.clientX,startY:e.clientY,x:item.x,y:item.y,w:item.w,h:item.h,rotation:item.rotation||0,radius:item.radius||92,centerX:item.x+item.w/2,centerY:item.y+item.h/2};}
-  pointerMove(e){if(!this.drag)return;const item=this.items.find(x=>x.id===this.drag.id);if(!item)return;const z=this.state.zoom||1,delta=sceneDeltaFromClient(e.clientX-this.drag.startX,e.clientY-this.drag.startY,z),dx=delta.x,dy=delta.y;if(this.drag.mode==='move'){item.x=this.drag.x+dx;item.y=this.drag.y+dy;}else if(this.drag.mode==='resize'){item.w=Math.max(item.type==='ruler'?260:180,this.drag.w+dx);item.h=item.type==='ruler'?Math.max(72,this.drag.h+dy*.2):Math.max(140,this.drag.h+dy);if(item.type==='compass')item.radius=clamp(Number(item.radius)||92,30,Math.max(45,Math.min(item.w,item.h)*.45));}else if(this.drag.mode==='rotate'){const r=this.layer.getBoundingClientRect(),cx=r.left+this.drag.centerX*z,cy=r.top+this.drag.centerY*z;item.rotation=Math.atan2(e.clientY-cy,e.clientX-cx)*180/Math.PI+90;}else if(this.drag.mode==='angle'&&item.type==='protractor'){const r=this.layer.getBoundingClientRect(),cx=r.left+(item.x+item.w/2)*z,cy=r.top+(item.y+item.h*.909)*z;item.angle=protractorAngleFromPointer({pointerX:e.clientX,pointerY:e.clientY,pivotX:cx,pivotY:cy,rotation:item.rotation||0});}else if(this.drag.mode==='radius'&&item.type==='compass'){item.radius=compassRadiusFromDrag({startRadius:this.drag.radius,dx,dy,rotation:item.rotation||0,min:30,max:Math.max(45,Math.min(item.w,item.h)*.45)});}this.render();}
+  pointerMove(e){if(!this.drag)return;const item=this.items.find(x=>x.id===this.drag.id);if(!item)return;const z=this.state.zoom||1,delta=sceneDeltaFromClient(e.clientX-this.drag.startX,e.clientY-this.drag.startY,z),dx=delta.x,dy=delta.y;if(this.drag.mode==='move'){item.x=this.drag.x+dx;item.y=this.drag.y+dy;}else if(this.drag.mode==='resize'){const local=sceneDeltaToLocalAxes(dx,dy,this.drag.rotation),rdx=local.x,rdy=local.y;item.w=Math.max(item.type==='ruler'?260:180,this.drag.w+rdx);item.h=item.type==='ruler'?Math.max(72,this.drag.h+rdy*.2):Math.max(140,this.drag.h+rdy);if(item.type==='compass')item.radius=clamp(Number(item.radius)||92,30,Math.max(45,Math.min(item.w,item.h)*.45));}else if(this.drag.mode==='rotate'){const r=this.layer.getBoundingClientRect(),cx=r.left+this.drag.centerX*z,cy=r.top+this.drag.centerY*z;item.rotation=Math.atan2(e.clientY-cy,e.clientX-cx)*180/Math.PI+90;}else if(this.drag.mode==='angle'&&item.type==='protractor'){const r=this.layer.getBoundingClientRect(),cx=r.left+(item.x+item.w/2)*z,cy=r.top+(item.y+item.h*.909)*z;item.angle=protractorAngleFromPointer({pointerX:e.clientX,pointerY:e.clientY,pivotX:cx,pivotY:cy,rotation:item.rotation||0});}else if(this.drag.mode==='radius'&&item.type==='compass'){item.radius=compassRadiusFromDrag({startRadius:this.drag.radius,dx,dy,rotation:item.rotation||0,min:30,max:Math.max(45,Math.min(item.w,item.h)*.45)});}this.render();}
   pointerUp(){if(!this.drag)return;this.drag=null;this.onChange?.();}
   applyConstruction(item){if(!this.objectManager)return;if(item.type==='ruler')this.drawAlongRuler(item);else if(item.type==='protractor')this.buildAngle(item);else if(item.mode==='arc')this.buildArc(item);else this.buildCircle(item);}
   drawAlongRuler(item){const a=this.localToScene(item,item.w*.04,item.h*.90),b=this.localToScene(item,item.w*.96,item.h*.90);this.objectManager.addSegment(a,b,{color:this.state.color,lineWidth:this.state.lineWidth});}
