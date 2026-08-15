@@ -17,7 +17,7 @@ function normalizeExpression(expr) {
   return String(expr || 'x')
     .trim()
     .toLowerCase()
-    .replaceAll('π', 'pi')
+    .replaceAll('π', ' pi ')
     .replaceAll('−', '-')
     .replaceAll('–', '-')
     .replaceAll('×', '*')
@@ -70,13 +70,17 @@ function tokenize(expr) {
 }
 
 function canEndValue(token) {
-  return token && ['number', 'variable', 'constant'].includes(token.type)
-    || token?.type === 'paren' && token.value === ')';
+  return Boolean(token && (
+    ['number', 'variable', 'constant'].includes(token.type)
+    || (token.type === 'paren' && token.value === ')')
+  ));
 }
 
 function canStartValue(token) {
-  return token && ['number', 'variable', 'constant', 'function'].includes(token.type)
-    || token?.type === 'paren' && token.value === '(';
+  return Boolean(token && (
+    ['number', 'variable', 'constant', 'function'].includes(token.type)
+    || (token.type === 'paren' && token.value === '(')
+  ));
 }
 
 function insertImplicitMultiplication(tokens) {
