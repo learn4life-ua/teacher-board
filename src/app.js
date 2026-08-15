@@ -24,7 +24,7 @@ const autosaveState = $('#autosaveState');
 const scene = new Scene({ viewport, scene: sceneEl, zoomLabel, state });
 const objectManager = new ObjectManager({ state, layer: objectLayer, onChange: commit });
 const drawing = new FreehandDrawing({ state, canvas, scene, onChange: commit });
-const geometryTools = new GeometryTools({ state, layer: instrumentLayer, onChange: commit });
+const geometryTools = new GeometryTools({ state, layer: instrumentLayer, objectManager, onChange: commit });
 
 let shapeGesture = null;
 
