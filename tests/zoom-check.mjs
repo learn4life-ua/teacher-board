@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import process from 'node:process';
-import { normalizeZoom, scenePointFromClient, MIN_ZOOM, MAX_ZOOM } from '../src/core/scene.js';
+import { normalizeZoom, scenePointFromClient, sceneDeltaFromClient, MIN_ZOOM, MAX_ZOOM } from '../src/core/scene.js';
 
 const errors=[];
 const fail=message=>errors.push(message);
@@ -22,12 +22,20 @@ for(const zoom of [.5,.75,1,1.25,1.5,1.75,2]){
   if(!near(point.x,logical.x)||!near(point.y,logical.y)){
     fail(`client→scene coordinates drift at ${Math.round(zoom*100)}%: ${point.x}, ${point.y}`);
   }
+  const delta=sceneDeltaFromClient(100*zoom,64*zoom,zoom);
+  if(!near(delta.x,100)||!near(delta.y,64)){
+    fail(`client delta→scene delta drift at ${Math.round(zoom*100)}%: ${delta.x}, ${delta.y}`);
+  }
 }
 
 const app=fs.readFileSync('src/app.js','utf8');
 if(!/setZoom\(state\.zoom\+\.25\)/.test(app)||!/setZoom\(state\.zoom-\.25\)/.test(app)){
   fail('Toolbar zoom buttons must step by 25%.');
 }
+const objects=fs.readFileSync('src/objects/object-manager.js','utf8');
+const geometry=fs.readFileSync('src/instruments/geometry-tools.js','utf8');
+if(!objects.includes('sceneDeltaFromClient')) fail('Object drag must use the shared scene delta helper.');
+if(!geometry.includes('sceneDeltaFromClient')) fail('Geometry drag must use the shared scene delta helper.');
 
 const css=fs.readFileSync('css/next.css','utf8');
 if(!/\.board-viewport\{[^}]*width:calc\(1600px \* var\(--scene-zoom,1\)\)[^}]*height:calc\(900px \* var\(--scene-zoom,1\)\)/.test(css)){
