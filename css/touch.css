@@ -1,5 +1,6 @@
 .scene-object:not(.locked-object),
 .scene-object:not(.locked-object) .object-handle,
+.scene-object:not(.locked-object) .object-edit,
 .scene-object:not(.locked-object) .object-delete,
 .geometry-tool,
 .geometry-tool button,
@@ -14,6 +15,22 @@
   -webkit-tap-highlight-color:transparent;
 }
 
+.object-edit{
+  position:absolute;
+  left:-15px;
+  top:-16px;
+  width:28px;
+  height:28px;
+  border:0;
+  border-radius:50%;
+  background:#2f7c69;
+  color:#fff;
+  font-size:16px;
+  line-height:26px;
+  padding:0;
+  box-shadow:0 1px 4px rgba(0,0,0,.22);
+}
+
 #autosaveState[data-status="error"]{
   color:#9a3a3a;
   font-weight:700;
@@ -23,6 +40,7 @@
   .object-handle{width:24px;height:24px}
   .resize-handle{right:-16px;bottom:-16px}
   .rotate-handle{top:-42px;width:32px;height:32px;font-size:17px}
+  .object-edit{left:-20px;top:-20px;width:34px;height:34px;font-size:19px;line-height:32px}
   .object-delete{right:-18px;top:-20px;width:34px;height:34px;font-size:24px;line-height:32px}
   .geometry-close{width:34px;height:34px;right:-16px;top:-18px}
   .geometry-rotate{width:32px;height:32px;top:-42px}
