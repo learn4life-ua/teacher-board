@@ -8,6 +8,26 @@ import { createImageObject, imageMarkup } from './images.js';
 
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 
+export function resizeObjectDimensions({kind,startW,startH,dx,dy,rotation=0,aspect=startW/Math.max(1,startH)}){
+  const local=sceneDeltaToLocalAxes(dx,dy,rotation),rdx=local.x,rdy=local.y;
+  const minW=kind==='graph'?320:kind==='text'?120:kind==='image'?80:40;
+  const minH=kind==='graph'?240:kind==='text'?50:kind==='image'?60:20;
+  let w=Math.max(minW,startW+rdx),h=Math.max(minH,startH+rdy);
+  if(kind==='image'){
+    const ratio=Math.max(.05,Number(aspect)||1);
+    if(Math.abs(rdx)>=Math.abs(rdy)){
+      w=Math.max(minW,startW+rdx);
+      h=Math.max(minH,w/ratio);
+      w=h*ratio;
+    }else{
+      h=Math.max(minH,startH+rdy);
+      w=Math.max(minW,h*ratio);
+      h=w/ratio;
+    }
+  }
+  return {w,h,local};
+}
+
 export class ObjectManager {
   constructor({ state, layer, onChange }) { this.state=state; this.layer=layer; this.onChange=onChange; this.drag=null; this.bindGlobalPointerEvents(); }
   get objects() { return activePage(this.state).objects; }
@@ -59,19 +79,8 @@ export class ObjectManager {
     if(this.drag.mode==='move'){
       obj.x=clamp(this.drag.x+dx,-obj.w+20,1580);obj.y=clamp(this.drag.y+dy,-obj.h+20,880);
     }else if(this.drag.mode==='resize'){
-      const local=sceneDeltaToLocalAxes(dx,dy,this.drag.rotation),rdx=local.x,rdy=local.y;
-      const minW=obj.kind==='graph'?320:obj.kind==='text'?120:obj.kind==='image'?80:40;
-      const minH=obj.kind==='graph'?240:obj.kind==='text'?50:obj.kind==='image'?60:20;
-      if(obj.kind==='image'){
-        const aspect=Math.max(.05,this.drag.aspect||1);
-        if(Math.abs(rdx)>=Math.abs(rdy)){
-          obj.w=Math.max(minW,this.drag.w+rdx);obj.h=Math.max(minH,obj.w/aspect);obj.w=obj.h*aspect;
-        }else{
-          obj.h=Math.max(minH,this.drag.h+rdy);obj.w=Math.max(minW,obj.h*aspect);obj.h=obj.w/aspect;
-        }
-      }else{
-        obj.w=Math.max(minW,this.drag.w+rdx);obj.h=Math.max(minH,this.drag.h+rdy);
-      }
+      const resized=resizeObjectDimensions({kind:obj.kind,startW:this.drag.w,startH:this.drag.h,dx,dy,rotation:this.drag.rotation,aspect:this.drag.aspect});
+      obj.w=resized.w;obj.h=resized.h;
       if(obj.kind==='text')obj.fontSize=clamp(Math.round(32*obj.h/100),14,96);
     }else if(this.drag.mode==='rotate'){
       const rect=this.layer.getBoundingClientRect(),cx=rect.left+this.drag.center.x*scale,cy=rect.top+this.drag.center.y*scale;obj.rotation=Math.atan2(e.clientY-cy,e.clientX-cx)*180/Math.PI+90;
