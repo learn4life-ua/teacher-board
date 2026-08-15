@@ -9,6 +9,7 @@ export class FreehandDrawing {
     this.scene = scene;
     this.onChange = onChange;
     this.current = null;
+    this.pointerId = null;
     this.bind();
   }
 
@@ -17,13 +18,19 @@ export class FreehandDrawing {
     this.canvas.addEventListener('pointermove', e => this.move(e));
     window.addEventListener('pointerup', e => this.up(e));
     window.addEventListener('pointercancel', e => this.up(e));
+    window.addEventListener('blur', () => this.up());
+  }
+
+  matchesPointer(e) {
+    return this.pointerId === null || e?.pointerId === undefined || e.pointerId === this.pointerId;
   }
 
   down(e) {
-    if (!['pen', 'marker', 'eraser'].includes(this.state.tool)) return;
+    if (!['pen', 'marker', 'eraser'].includes(this.state.tool) || this.current) return;
     e.preventDefault();
     pushHistory(this.state);
     const p = this.scene.pointFromEvent(e);
+    this.pointerId = e.pointerId ?? null;
     this.current = {
       id: uid('stroke'),
       tool: this.state.tool,
@@ -36,14 +43,15 @@ export class FreehandDrawing {
   }
 
   move(e) {
-    if (!this.current) return;
+    if (!this.current || !this.matchesPointer(e)) return;
     this.current.points.push(this.scene.pointFromEvent(e));
     this.render();
   }
 
-  up() {
-    if (!this.current) return;
+  up(e) {
+    if (!this.current || !this.matchesPointer(e)) return;
     this.current = null;
+    this.pointerId = null;
     this.onChange?.();
   }
 
