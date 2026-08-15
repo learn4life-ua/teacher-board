@@ -71,7 +71,7 @@ export class ObjectManager {
   }
   pointerDownObject(e,obj){if(this.state.tool!=='select'||obj.locked)return;e.preventDefault();e.stopPropagation();this.select(obj.id);const handle=e.target.closest('[data-handle]')?.dataset.handle;this.drag={mode:handle||'move',id:obj.id,startX:e.clientX,startY:e.clientY,x:obj.x,y:obj.y,w:obj.w,h:obj.h,aspect:obj.w/Math.max(1,obj.h),rotation:obj.rotation||0,center:{x:obj.x+obj.w/2,y:obj.y+obj.h/2},historyPushed:false};}
   bindGlobalPointerEvents(){window.addEventListener('pointermove',e=>this.pointerMove(e));window.addEventListener('pointerup',()=>this.pointerUp());window.addEventListener('pointercancel',()=>this.pointerUp());window.addEventListener('blur',()=>this.pointerUp());}
-  ensureDragHistory(screenDx,screenDy){if(!this.drag||this.drag.historyPushed)return false;if(Math.abs(screenDx)<.5&&Math.abs(screenDy)<.5)return false;pushHistory(this.state);this.drag.historyPushed=true;return true;}
+  ensureDragHistory(screenDx,screenDy){if(!this.drag)return false;if(this.drag.historyPushed)return true;if(Math.abs(screenDx)<.5&&Math.abs(screenDy)<.5)return false;pushHistory(this.state);this.drag.historyPushed=true;return true;}
   pointerMove(e){
     if(!this.drag)return;
     const obj=this.objects.find(o=>o.id===this.drag.id);if(!obj||obj.locked)return;
