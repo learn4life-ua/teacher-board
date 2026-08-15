@@ -8,6 +8,7 @@ if(button&&scene&&dot){
   let pressed=false;
   let activePointerId=null;
   let hideTimer=null;
+  let previousToolButton=null;
 
   const hideDot=()=>{
     if(hideTimer)clearTimeout(hideTimer);
@@ -15,13 +16,25 @@ if(button&&scene&&dot){
     dot.hidden=true;
   };
 
+  const restorePreviousTool=()=>{
+    if(previousToolButton?.isConnected&&!document.querySelector('.tool.active:not(#laserBtn)'))previousToolButton.classList.add('active');
+    previousToolButton=null;
+  };
+
   const setActive=value=>{
-    active=Boolean(value);
+    const next=Boolean(value);
+    if(next===active)return;
+    if(next){
+      previousToolButton=document.querySelector('.tool.active:not(#laserBtn)');
+      document.querySelectorAll('.tool').forEach(control=>control.classList.remove('active'));
+    }
+    active=next;
     pressed=false;
     activePointerId=null;
     button.classList.toggle('active',active);
     hideDot();
     document.body.classList.toggle('laser-active',active);
+    if(!active)restorePreviousTool();
   };
 
   const pointFromEvent=e=>{
@@ -73,8 +86,6 @@ if(button&&scene&&dot){
   },true);
 
   // Track the active gesture globally instead of relying on pointer capture.
-  // This keeps the laser responsive when the pointer/finger leaves the board,
-  // and avoids browser-specific capture issues on touch devices.
   window.addEventListener('pointermove',e=>{
     if(!active||!pressed)return;
     e.preventDefault();
