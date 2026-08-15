@@ -38,6 +38,18 @@ async function runCase(name, contextOptions = {}) {
   assert.ok(await page.locator('.scene-object').count() >= 1, `${name}: shape object was not created`);
   console.log(`[${name}] shape ok`);
 
+  if (name === 'desktop') {
+    const beforeCurtain = await page.locator('.scene-object').count();
+    await drawShape(page, 'curtain', { x: 55, y: 80 }, { x: 180, y: 165 });
+    assert.equal(await page.locator('.scene-object').count(), beforeCurtain + 1, `${name}: curtain object was not created`);
+    assert.ok(await page.locator('.scene-object svg rect[fill="#e7ecea"]').count() >= 1, `${name}: curtain visual is missing`);
+    await page.click('#undoBtn');
+    assert.equal(await page.locator('.scene-object').count(), beforeCurtain, `${name}: undo did not remove curtain`);
+    await page.click('#redoBtn');
+    assert.equal(await page.locator('.scene-object').count(), beforeCurtain + 1, `${name}: redo did not restore curtain`);
+    console.log(`[${name}] curtain+undo/redo ok`);
+  }
+
   if (narrow) {
     await page.click('#mobilePanelBtn');
     assert.equal(await page.locator('#sidePanel').evaluate(() => document.body.classList.contains('side-panel-open')), true, `${name}: mobile panel did not open`);
@@ -82,25 +94,14 @@ async function runCase(name, contextOptions = {}) {
     assert.equal(await page.locator('.scene-object').count(), beforeArc + 1, `${name}: compass did not construct an arc`);
     console.log(`[${name}] geometry constructions ok`);
 
-    const beforeCurtain = await page.locator('.scene-object').count();
-    await drawShape(page, 'curtain', { x: 1220, y: 690 }, { x: 1450, y: 840 });
-    assert.equal(await page.locator('.scene-object').count(), beforeCurtain + 1, `${name}: curtain object was not created`);
-    assert.ok(await page.locator('.scene-object svg rect[fill="#e7ecea"]').count() >= 1, `${name}: curtain visual is missing`);
-
-    await page.click('#undoBtn');
-    assert.equal(await page.locator('.scene-object').count(), beforeCurtain, `${name}: undo did not remove curtain`);
-    await page.click('#redoBtn');
-    assert.equal(await page.locator('.scene-object').count(), beforeCurtain + 1, `${name}: redo did not restore curtain`);
-    console.log(`[${name}] curtain+undo/redo ok`);
-
     const beforeLaserObjects = await page.locator('.scene-object').count();
     await page.click('#laserBtn');
     assert.equal(await page.locator('#laserBtn').evaluate(el => el.classList.contains('active')), true, `${name}: laser did not activate`);
     const sceneBox = await page.locator('#scene').boundingBox();
     assert.ok(sceneBox, `${name}: no scene box for laser`);
-    await page.mouse.move(sceneBox.x + 1080, sceneBox.y + 520);
+    await page.mouse.move(sceneBox.x + 70, sceneBox.y + 390);
     await page.mouse.down();
-    await page.mouse.move(sceneBox.x + 1140, sceneBox.y + 560);
+    await page.mouse.move(sceneBox.x + 130, sceneBox.y + 430);
     assert.equal(await page.locator('#laserDot').isVisible(), true, `${name}: laser dot is not visible while pointing`);
     await page.mouse.up();
     await page.waitForTimeout(260);
