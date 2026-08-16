@@ -56,7 +56,9 @@ if(hugeSegment.w!==3200||hugeSegment.h!==20)fail(`Runtime segment resize escaped
 const points=Array.from({length:MAX_POINTS_PER_STROKE+50},(_,i)=>({x:i,y:i}));
 const strokes=Array.from({length:MAX_STROKES_PER_PAGE+20},(_,i)=>({id:`s${i}`,tool:'pen',width:4,points:i===0?points:[{x:i,y:i}]}));
 const objects=Array.from({length:MAX_OBJECTS_PER_PAGE+20},(_,i)=>({id:`o${i}`,kind:'shape',shape:'rect',x:0,y:0,w:80,h:60,lineWidth:4}));
-objects[0]={id:'too-big-image',kind:'image',src:`data:image/png;base64,${'A'.repeat(MAX_IMAGE_DATA_URL_LENGTH)}`};
+const oversizedRaster=`data:image/png;base64,${'A'.repeat(MAX_IMAGE_DATA_URL_LENGTH)}`;
+objects[0]={id:'too-big-image',kind:'image',src:oversizedRaster};
+objects[1]={id:'large-legacy-raster',kind:'image',src:oversizedRaster,legacyRaster:true,locked:true,w:1600,h:900};
 const instruments=Array.from({length:MAX_INSTRUMENTS_PER_PAGE+20},(_,i)=>({id:`r${i}`,type:'ruler'}));
 const pages=Array.from({length:MAX_PAGES+20},(_,i)=>({id:`p${i}`,name:`P${i}`,strokes:i===0?strokes:[],objects:i===0?objects:[],instruments:i===0?instruments:[]}));
 const capped=normalizeStoredState({tool:'select',zoom:1,activePage:999,pages},fallback);
@@ -68,7 +70,9 @@ else{
   if(page.strokes.length!==MAX_STROKES_PER_PAGE)fail(`Stroke cap failed: ${page.strokes.length}/${MAX_STROKES_PER_PAGE}.`);
   if(page.strokes[0]?.points.length!==MAX_POINTS_PER_STROKE)fail(`Stroke-point cap failed: ${page.strokes[0]?.points.length}/${MAX_POINTS_PER_STROKE}.`);
   if(page.objects.length!==MAX_OBJECTS_PER_PAGE-1)fail(`Object cap/image rejection failed: ${page.objects.length}.`);
-  if(page.objects.some(item=>item.id==='too-big-image'))fail('Oversized image DataURL must be rejected before render.');
+  if(page.objects.some(item=>item.id==='too-big-image'))fail('Oversized new image DataURL must be rejected before render.');
+  const legacy=page.objects.find(item=>item.id==='large-legacy-raster');
+  if(!legacy||!legacy.locked||!legacy.legacyRaster)fail('Oversized legacy raster must be preserved so migration can rely on transactional storage rollback.');
   if(page.instruments.length!==MAX_INSTRUMENTS_PER_PAGE)fail(`Instrument cap failed: ${page.instruments.length}/${MAX_INSTRUMENTS_PER_PAGE}.`);
 }
 
@@ -77,4 +81,4 @@ if(errors.length){
   errors.forEach(error=>console.error(`- ${error}`));
   process.exit(1);
 }
-console.log('TeacherBoard bounds check: OK (storage/runtime dimensions and structural caps)');
+console.log('TeacherBoard bounds check: OK (dimensions, structural caps and legacy raster preservation)');
