@@ -22,7 +22,7 @@ function aspectBox({width,height,ratio,minW,minH,maxW=MAX_OBJECT_W,maxH=MAX_OBJE
     if(w<minW){w=minW;h=w/r;}
   }
   if(w>maxW){w=maxW;h=w/r;}
-  if(h>maxH){h=maxH;w=h/r;}
+  if(h>maxH){h=maxH;w=h*r;}
   return {w,h};
 }
 
