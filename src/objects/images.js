@@ -7,6 +7,11 @@ const SMALL_FILE_BYTES = 900_000;
 
 export { isSafeImageType, isSafeImageDataUrl };
 
+function rejectImageFormat(message='Непідтримуваний формат зображення'){
+  try{window.dispatchEvent(new CustomEvent('teacherboard:image-format-rejected'));}catch{}
+  throw new Error(message);
+}
+
 export function createImageObject(src, naturalWidth = 800, naturalHeight = 600) {
   const maxW = 720, maxH = 520;
   const scale = Math.min(1, maxW / Math.max(1, naturalWidth), maxH / Math.max(1, naturalHeight));
@@ -72,12 +77,12 @@ async function optimizeDecodedImage(img) {
 
 export async function fileToDataUrl(file) {
   if (!file) throw new Error('Файл не вибрано');
-  if(!isSafeImageType(file.type))throw new Error('Підтримуються PNG, JPEG, WebP, GIF та AVIF');
+  if(!isSafeImageType(file.type))return rejectImageFormat('Підтримуються PNG, JPEG, WebP, GIF та AVIF');
 
   // Keep genuinely small files untouched: this preserves transparency and avoids recompression.
   if ((Number(file.size) || 0) <= SMALL_FILE_BYTES) {
     const original = await fileReaderDataUrl(file);
-    if(!isSafeImageDataUrl(original))throw new Error('Непідтримуваний формат зображення');
+    if(!isSafeImageDataUrl(original))return rejectImageFormat();
     const img = await loadImage(original);
     const largest = Math.max(img.naturalWidth || 1, img.naturalHeight || 1);
     if (largest <= MAX_SOURCE_DIMENSION && original.length <= TARGET_DATA_URL_LENGTH) return original;
