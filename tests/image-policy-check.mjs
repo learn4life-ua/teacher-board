@@ -25,12 +25,17 @@ const html=fs.readFileSync('preview.html','utf8');
 if(!html.includes('accept="image/png,image/jpeg,image/webp,image/gif,image/avif"'))fail('Image picker accept policy is not restricted to raster formats.');
 const images=fs.readFileSync('src/objects/images.js','utf8');
 const storage=fs.readFileSync('src/core/storage.js','utf8');
+const manager=fs.readFileSync('src/objects/object-manager.js','utf8');
+const guards=fs.readFileSync('src/ui/capacity-guards.js','utf8');
 if(!images.includes("from '../core/image-format.js'"))fail('Image object module must reuse core image policy.');
 if(!storage.includes("from './image-format.js'"))fail('Storage must reuse core image policy.');
+if(!images.includes('teacherboard:image-format-rejected')||!images.includes('queueMicrotask'))fail('Unsupported image formats must surface a precise deferred notice event.');
+if(!manager.includes('rollbackAdded')||!manager.includes('teacherboard:image-storage-failed')||!manager.includes('saved===false'))fail('Image insertion must roll back object/history after storage failure.');
+if(!guards.includes('teacherboard:image-storage-failed')||!guards.includes('teacherboard:image-format-rejected'))fail('Image failure events must have user-visible notices.');
 
 if(errors.length){
   console.error(`TeacherBoard image policy: FAIL (${errors.length})`);
   errors.forEach(error=>console.error(`- ${error}`));
   process.exit(1);
 }
-console.log('TeacherBoard image policy: OK (safe raster formats only)');
+console.log('TeacherBoard image policy: OK (safe raster formats and transactional failure handling)');
