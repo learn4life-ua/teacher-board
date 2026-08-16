@@ -28,10 +28,14 @@ export class FreehandDrawing {
     return this.pointerId === null || e?.pointerId === undefined || e.pointerId === this.pointerId;
   }
 
+  notifyCapacity(){
+    try{window.dispatchEvent(new CustomEvent('teacherboard:capacity-limit',{detail:{kind:'strokes',limit:MAX_STROKES_PER_PAGE}}));}catch{}
+  }
+
   down(e) {
     if (!['pen', 'marker', 'eraser'].includes(this.state.tool) || this.current) return;
     const page=activePage(this.state);
-    if(page.strokes.length>=MAX_STROKES_PER_PAGE)return;
+    if(page.strokes.length>=MAX_STROKES_PER_PAGE){this.notifyCapacity();return;}
     e.preventDefault();
     pushHistory(this.state);
     const p = this.scene.pointFromEvent(e);
