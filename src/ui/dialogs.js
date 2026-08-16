@@ -1,3 +1,5 @@
+import './dialog-compat.js';
+
 export function confirmDialog(dialog,{title='Підтвердження',message='',confirmText='Підтвердити',danger=false}={}){
   if(!dialog)return Promise.resolve(false);
   const titleEl=dialog.querySelector('[data-dialog-title]');
