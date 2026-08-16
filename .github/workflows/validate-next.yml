@@ -1,0 +1,184 @@
+name: Validate TeacherBoard Next
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Check JavaScript syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' file; do
+            echo "Checking $file"
+            node --check "$file"
+          done < <(find src tests -type f \( -name '*.js' -o -name '*.mjs' \) -print0)
+
+      - name: Check module paths and preview contract
+        run: node tests/static-check.mjs
+
+      - name: Check shape geometry regressions
+        run: node tests/shape-geometry-check.mjs
+
+      - name: Check dialog compatibility contract
+        run: node tests/dialog-compat-check.mjs
+
+      - name: Check zoom coordinate contract
+        run: node tests/zoom-check.mjs
+
+      - name: Check geometry bounds contract
+        run: node tests/bounds-check.mjs
+
+      - name: Check content and structural limits
+        run: node tests/content-limits-check.mjs
+
+      - name: Check page history contract
+        run: node tests/history-check.mjs
+
+      - name: Check storage recovery contract
+        run: node tests/storage-check.mjs
+
+      - name: Check graph performance guards
+        run: node tests/graph-performance-check.mjs
+
+      - name: Check graph SVG safety
+        run: node tests/graph-safety-check.mjs
+
+      - name: Check PNG export contract
+        run: node tests/export-contract-check.mjs
+
+      - name: Check text rendering safety
+        run: node tests/text-safety-check.mjs
+
+      - name: Check safe image format policy
+        run: node tests/image-policy-check.mjs
+
+      - name: Check final release regression contract
+        run: node tests/release-contract-check.mjs
+
+      - name: Check object edit panel contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'objectedit' src/objects/object-manager.js
+          grep -q 'class="object-edit"' src/objects/object-manager.js
+          grep -q 'bindObjectEditing' src/app.js
+          grep -q '\.object-edit' css/touch.css
+          if grep -q 'Редагувати текст:' src/objects/object-manager.js; then
+            echo 'Legacy text prompt must not return.'
+            exit 1
+          fi
+
+      - name: Check page rename dialog contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'id="renamePageDialog"' preview.html
+          grep -q 'id="renamePageForm"' preview.html
+          grep -q 'id="renamePageInput"' preview.html
+          grep -q 'id="renamePageCancelBtn"' preview.html
+          grep -q 'id="renamePageSaveBtn"' preview.html
+          grep -q 'bindPageRename' src/app.js
+          grep -q 'showModal' src/app.js
+          grep -q '\.page-name-dialog' css/touch.css
+          if grep -Fq "prompt('Назва сторінки:" src/app.js; then
+            echo 'Legacy page rename prompt must not return.'
+            exit 1
+          fi
+
+      - name: Check destructive action dialog contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'id="confirmActionDialog"' preview.html
+          grep -q 'data-dialog-title' preview.html
+          grep -q 'data-dialog-message' preview.html
+          grep -q 'data-dialog-cancel' preview.html
+          grep -q 'data-dialog-confirm' preview.html
+          grep -Fq "import { confirmDialog } from './ui/dialogs.js'" src/app.js
+          grep -q 'confirmDialog' src/ui/dialogs.js
+          grep -q 'button.danger' css/touch.css
+          if grep -Eq '\bconfirm\s*\(' src/app.js; then
+            echo 'Browser confirm() must not be used for destructive page actions.'
+            exit 1
+          fi
+
+      - name: Check non blocking notice contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'id="statusToast"' preview.html
+          grep -Fq "import { showNotice } from './ui/notices.js'" src/app.js
+          grep -Fq "import { showNotice } from '../ui/notices.js'" src/core/export-bind.js
+          grep -q 'showNotice' src/ui/notices.js
+          grep -q '\.status-toast' css/touch.css
+          if grep -Eq '\balert\s*\(' src/app.js src/core/export-bind.js; then
+            echo 'Blocking browser alert() must not be used in the main app or PNG export.'
+            exit 1
+          fi
+
+      - name: Check large image memory contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'MAX_SOURCE_DIMENSION = 1600' src/objects/images.js
+          grep -q 'SMALL_FILE_BYTES' src/objects/images.js
+          grep -q 'URL.createObjectURL' src/objects/images.js
+          grep -q 'URL.revokeObjectURL' src/objects/images.js
+          grep -q 'finally' src/objects/images.js
+
+      - name: Check teaching interaction contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q "ctx.globalAlpha = isMarker ? 0.24 : 1" src/drawing/freehand.js
+          grep -q 'this.pointerId = e.pointerId' src/drawing/freehand.js
+          grep -q 'matchesPointer' src/drawing/freehand.js
+          grep -q "setRangeText(value,start,end,'end')" src/app.js
+          grep -q 'MIN_SHAPE_GESTURE=8' src/app.js
+          grep -q 'pointerId:e.pointerId' src/app.js
+          grep -q 'validShapeGesture' src/app.js
+          grep -q 'historyPushed:false' src/objects/object-manager.js
+          grep -q 'pointerId:e.pointerId' src/objects/object-manager.js
+          grep -q 'matchesPointer' src/objects/object-manager.js
+          grep -q 'historyPushed:false' src/instruments/geometry-tools.js
+          grep -q 'pointerId:e.pointerId' src/instruments/geometry-tools.js
+          grep -q 'matchesPointer' src/instruments/geometry-tools.js
+          grep -q 'if(this.drag.historyPushed)return true' src/objects/object-manager.js
+          grep -q 'if(this.drag.historyPushed)return true' src/instruments/geometry-tools.js
+          grep -q 'ensureDragHistory' src/objects/object-manager.js
+          grep -q 'ensureDragHistory' src/instruments/geometry-tools.js
+          grep -q 'function isEditableTarget' src/app.js
+          grep -q "input,textarea,select,\[contenteditable=\"true\"\]" src/app.js
+          grep -q "if(!editing&&(e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z')" src/app.js
+          grep -q "if(!editing&&(e.key==='Delete'||e.key==='Backspace')" src/app.js
+          grep -q "#colorPicker').addEventListener('change'" src/app.js
+          grep -q 'page.background===b.dataset.bg' src/app.js
+          grep -q 'if(i===state.activePage)return' src/app.js
+          grep -q 'entries.some' src/objects/object-manager.js
+          grep -q "closest?.('.tool,.instrument-btn')" src/tools/laser.js
+          grep -q 'control===button' src/tools/laser.js
+          grep -q 'setActive(false)' src/tools/laser.js
+          grep -q 'scene:not(\[data-tool="select"\]) .scene-object' css/touch.css
+          grep -q 'scene:not(\[data-tool="select"\]) .geometry-tool' css/touch.css
+          if grep -Eq 'pointerDownObject\([^)]*\).*pushHistory' src/objects/object-manager.js; then
+            echo 'Object selection must not create an empty undo snapshot.'
+            exit 1
+          fi
+          if grep -Eq 'pointerDown\([^)]*\).*pushHistory' src/instruments/geometry-tools.js; then
+            echo 'Geometry tap must not create an empty undo snapshot.'
+            exit 1
+          fi
