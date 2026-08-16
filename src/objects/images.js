@@ -3,12 +3,17 @@ import { uid } from '../core/state.js';
 const MAX_SOURCE_DIMENSION = 1600;
 const TARGET_DATA_URL_LENGTH = 1_250_000;
 const SMALL_FILE_BYTES = 900_000;
+const SAFE_IMAGE_TYPES = new Set(['image/png','image/jpeg','image/webp','image/gif','image/avif']);
+const SAFE_DATA_URL = /^data:image\/(?:png|jpe?g|webp|gif|avif);/i;
+
+export function isSafeImageType(type){return SAFE_IMAGE_TYPES.has(String(type||'').toLowerCase());}
+export function isSafeImageDataUrl(src){return SAFE_DATA_URL.test(String(src||''));}
 
 export function createImageObject(src, naturalWidth = 800, naturalHeight = 600) {
   const maxW = 720, maxH = 520;
   const scale = Math.min(1, maxW / Math.max(1, naturalWidth), maxH / Math.max(1, naturalHeight));
   return {
-    id: uid('image'), kind: 'image', src,
+    id: uid('image'), kind: 'image', src:isSafeImageDataUrl(src)?src:'',
     x: 320, y: 150,
     w: Math.max(120, naturalWidth * scale),
     h: Math.max(90, naturalHeight * scale),
@@ -17,7 +22,8 @@ export function createImageObject(src, naturalWidth = 800, naturalHeight = 600) 
 }
 
 export function imageMarkup(obj) {
-  const safe = String(obj.src || '').replaceAll('&','&amp;').replaceAll('"','&quot;');
+  const source=isSafeImageDataUrl(obj?.src)?String(obj.src):'';
+  const safe = source.replaceAll('&','&amp;').replaceAll('"','&quot;');
   return `<img class="board-image" src="${safe}" alt="Вставлене зображення" draggable="false">`;
 }
 
@@ -68,10 +74,12 @@ async function optimizeDecodedImage(img) {
 
 export async function fileToDataUrl(file) {
   if (!file) throw new Error('Файл не вибрано');
+  if(!isSafeImageType(file.type))throw new Error('Підтримуються PNG, JPEG, WebP, GIF та AVIF');
 
-  // Keep genuinely small files untouched: this preserves PNG/WebP transparency and avoids recompression.
+  // Keep genuinely small files untouched: this preserves transparency and avoids recompression.
   if ((Number(file.size) || 0) <= SMALL_FILE_BYTES) {
     const original = await fileReaderDataUrl(file);
+    if(!isSafeImageDataUrl(original))throw new Error('Непідтримуваний формат зображення');
     const img = await loadImage(original);
     const largest = Math.max(img.naturalWidth || 1, img.naturalHeight || 1);
     if (largest <= MAX_SOURCE_DIMENSION && original.length <= TARGET_DATA_URL_LENGTH) return original;
@@ -92,6 +100,7 @@ export async function fileToDataUrl(file) {
 }
 
 export function readImageSize(src) {
+  if(!isSafeImageDataUrl(src))return Promise.reject(new Error('Непідтримуване зображення'));
   return loadImage(src).then(img => ({
     width: img.naturalWidth || 800,
     height: img.naturalHeight || 600
