@@ -32,7 +32,24 @@ export function compassRightPercent(item){
 export class GeometryTools{
   constructor({state,layer,objectManager,onChange}){this.state=state;this.layer=layer;this.objectManager=objectManager;this.onChange=onChange;this.drag=null;window.addEventListener('pointermove',e=>this.pointerMove(e));window.addEventListener('pointerup',e=>this.pointerUp(e));window.addEventListener('pointercancel',e=>this.pointerUp(e));window.addEventListener('blur',()=>this.pointerUp());}
   get items(){return activePage(this.state).instruments;}
-  add(type){if(this.items.length>=MAX_INSTRUMENTS_PER_PAGE)return false;pushHistory(this.state);const base={id:uid(type),type,x:520,y:290,rotation:0};const item=type==='ruler'?{...base,w:520,h:96}:type==='protractor'?{...base,w:420,h:220,angle:60}:{...base,w:260,h:300,radius:92,mode:'circle',arcStart:0,arcEnd:180};this.items.push(item);this.render();this.onChange?.();return item;}
+  visiblePlacement(w,h){
+    const viewport=document.querySelector('#boardViewport');
+    const scene=this.layer.closest('.scene');
+    if(!viewport||!scene)return{x:520,y:290};
+    const vr=viewport.getBoundingClientRect(),sr=scene.getBoundingClientRect(),z=Math.max(.01,Number(this.state.zoom)||1);
+    const left=Math.max(vr.left,sr.left),right=Math.min(vr.right,sr.right),top=Math.max(vr.top,sr.top),bottom=Math.min(vr.bottom,sr.bottom);
+    const cx=((right>left?(left+right)/2:(vr.left+vr.right)/2)-sr.left)/z;
+    const cy=((bottom>top?(top+bottom)/2:(vr.top+vr.bottom)/2)-sr.top)/z;
+    return{x:clamp(cx-w/2,12,Math.max(12,1600-w-12)),y:clamp(cy-h/2,12,Math.max(12,900-h-44))};
+  }
+  add(type){
+    if(this.items.length>=MAX_INSTRUMENTS_PER_PAGE)return false;
+    pushHistory(this.state);
+    const base={id:uid(type),type,rotation:0};
+    const item=type==='ruler'?{...base,w:520,h:96}:type==='protractor'?{...base,w:420,h:220,angle:60}:{...base,w:260,h:300,radius:92,mode:'circle',arcStart:0,arcEnd:180};
+    Object.assign(item,this.visiblePlacement(item.w,item.h));
+    this.items.push(item);this.render();this.onChange?.();return item;
+  }
   render(){this.layer.innerHTML='';for(const item of this.items)this.layer.appendChild(this.element(item));}
   remove(id){const i=this.items.findIndex(x=>x.id===id);if(i<0)return;pushHistory(this.state);this.items.splice(i,1);this.render();this.onChange?.();}
   element(item){const el=document.createElement('div');el.className=`geometry-tool geometry-${item.type}`;el.dataset.id=item.id;Object.assign(el.style,{left:`${item.x}px`,top:`${item.y}px`,width:`${item.w}px`,height:`${item.h}px`,transform:`rotate(${item.rotation||0}deg)`});el.innerHTML=`${this.svg(item)}${this.actionMarkup(item)}<button class="geometry-close" type="button" title="Закрити">×</button><span class="geometry-rotate" data-handle="rotate" title="Повернути">↻</span><span class="geometry-resize" data-handle="resize" title="Змінити розмір"></span>${item.type==='protractor'?this.angleHandleMarkup(item):''}${item.type==='compass'?this.compassControls(item):''}`;
