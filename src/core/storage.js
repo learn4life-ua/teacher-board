@@ -1,5 +1,9 @@
 import { normalizeZoom } from './scene.js';
-import { MAX_TEXT_LENGTH, MAX_GRAPH_EXPRESSION_LENGTH, limitText } from './content-limits.js';
+import {
+  MAX_TEXT_LENGTH, MAX_GRAPH_EXPRESSION_LENGTH, MAX_PAGES,
+  MAX_STROKES_PER_PAGE, MAX_POINTS_PER_STROKE, MAX_OBJECTS_PER_PAGE,
+  MAX_INSTRUMENTS_PER_PAGE, MAX_IMAGE_DATA_URL_LENGTH, limitText
+} from './content-limits.js';
 
 const STORAGE_KEY = 'teacherboard.v2';
 const LEGACY_KEY = 'teacherboard.v1';
@@ -86,7 +90,7 @@ function normalizeObject(obj) {
     copy.color = typeof copy.color === 'string' ? copy.color : '#245d55';
     copy.fontSize = clamp(copy.fontSize,12,160,32);
   } else if (copy.kind === 'image') {
-    if (typeof copy.src !== 'string' || !copy.src.startsWith('data:image/')) return null;
+    if (typeof copy.src !== 'string' || !copy.src.startsWith('data:image/') || copy.src.length>MAX_IMAGE_DATA_URL_LENGTH) return null;
     copy.locked = Boolean(copy.locked || copy.legacyRaster);
     copy.legacyRaster = Boolean(copy.legacyRaster);
   }
@@ -95,7 +99,7 @@ function normalizeObject(obj) {
 
 function normalizeStroke(stroke){
   if(!stroke||typeof stroke!=='object'||!STROKE_TOOLS.has(stroke.tool)||!Array.isArray(stroke.points))return null;
-  const points=stroke.points.map(point=>{
+  const points=stroke.points.slice(0,MAX_POINTS_PER_STROKE).map(point=>{
     if(!point||typeof point!=='object')return null;
     const x=Number(point.x),y=Number(point.y);
     return Number.isFinite(x)&&Number.isFinite(y)?{
@@ -135,15 +139,15 @@ function normalizePage(page,index){
     id:String(source.id||id('page')),
     name:String(source.name||`Сторінка ${index+1}`).slice(0,80),
     background:BACKGROUNDS.has(source.background)?source.background:'clean',
-    strokes:(Array.isArray(source.strokes)?source.strokes:[]).map(normalizeStroke).filter(Boolean),
-    objects:(Array.isArray(source.objects)?source.objects:[]).map(normalizeObject).filter(Boolean),
-    instruments:(Array.isArray(source.instruments)?source.instruments:[]).map(normalizeInstrument).filter(Boolean)
+    strokes:(Array.isArray(source.strokes)?source.strokes:[]).slice(0,MAX_STROKES_PER_PAGE).map(normalizeStroke).filter(Boolean),
+    objects:(Array.isArray(source.objects)?source.objects:[]).slice(0,MAX_OBJECTS_PER_PAGE).map(normalizeObject).filter(Boolean),
+    instruments:(Array.isArray(source.instruments)?source.instruments:[]).slice(0,MAX_INSTRUMENTS_PER_PAGE).map(normalizeInstrument).filter(Boolean)
   };
 }
 
 export function normalizeStoredState(data,fallback){
   if(!data||typeof data!=='object'||!Array.isArray(data.pages)||!data.pages.length)return null;
-  const pages=data.pages.map(normalizePage);
+  const pages=data.pages.slice(0,MAX_PAGES).map(normalizePage);
   const activePage=Math.max(0,Math.min(Math.trunc(finite(data.activePage,0)),pages.length-1));
   const rawTool=typeof data.tool==='string'?data.tool:'select';
   const tool=TOOLS.has(rawTool)?rawTool:'select';
@@ -165,10 +169,10 @@ function migrateLegacyPage(page, index) {
   const objects = [];
 
   if (Array.isArray(page?.objects)) {
-    page.objects.map(normalizeObject).filter(Boolean).forEach(o => objects.push(o));
+    page.objects.slice(0,MAX_OBJECTS_PER_PAGE).map(normalizeObject).filter(Boolean).forEach(o => objects.push(o));
   }
 
-  if (typeof page?.image === 'string' && page.image.startsWith('data:image/')) {
+  if (typeof page?.image === 'string' && page.image.startsWith('data:image/') && page.image.length<=MAX_IMAGE_DATA_URL_LENGTH) {
     objects.unshift({
       id: id('legacyRaster'), kind: 'image', src: page.image,
       name: 'Імпорт зі старої дошки', x: 0, y: 0, w: 1600, h: 900,
@@ -177,7 +181,7 @@ function migrateLegacyPage(page, index) {
   }
 
   if (Array.isArray(page?.texts)) {
-    page.texts.forEach(t => {
+    page.texts.slice(0,MAX_OBJECTS_PER_PAGE).forEach(t => {
       if (!t || !String(t.text ?? '').trim()) return;
       objects.push({
         id: id('text'), kind: 'text', text: limitText(t.text,MAX_TEXT_LENGTH,''),
@@ -192,9 +196,9 @@ function migrateLegacyPage(page, index) {
     id: page?.id || id('page'),
     name: page?.name || `Сторінка ${index + 1}`,
     background: page?.background || 'clean',
-    strokes: Array.isArray(page?.strokes) ? page.strokes : [],
-    objects,
-    instruments: Array.isArray(page?.instruments) ? page.instruments : []
+    strokes: Array.isArray(page?.strokes) ? page.strokes.slice(0,MAX_STROKES_PER_PAGE) : [],
+    objects:objects.slice(0,MAX_OBJECTS_PER_PAGE),
+    instruments: Array.isArray(page?.instruments) ? page.instruments.slice(0,MAX_INSTRUMENTS_PER_PAGE) : []
   },index);
 }
 
@@ -223,13 +227,14 @@ function migrateLegacy(fallback) {
   try {
     const legacy = JSON.parse(raw);
     if (!Array.isArray(legacy.pages) || !legacy.pages.length) return null;
+    const legacyPages=legacy.pages.slice(0,MAX_PAGES);
 
     const migrated = normalizeStoredState({
       ...fallback,
       tool: 'select',
       zoom: 1,
-      activePage: Math.max(0, Math.min(finite(legacy.activePage,0), legacy.pages.length - 1)),
-      pages: legacy.pages.map(migrateLegacyPage)
+      activePage: Math.max(0, Math.min(finite(legacy.activePage,0), legacyPages.length - 1)),
+      pages: legacyPages.map(migrateLegacyPage)
     },fallback);
     if(!migrated)return null;
 
