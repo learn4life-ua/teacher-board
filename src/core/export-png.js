@@ -8,8 +8,8 @@ function loadImage(src){return new Promise((resolve,reject)=>{const img=new Imag
 function drawBackground(ctx,bg){
   ctx.fillStyle='#fff';ctx.fillRect(0,0,WIDTH,HEIGHT);
   const lines=(step,color)=>{ctx.beginPath();for(let x=step;x<WIDTH;x+=step){ctx.moveTo(x,0);ctx.lineTo(x,HEIGHT);}for(let y=step;y<HEIGHT;y+=step){ctx.moveTo(0,y);ctx.lineTo(WIDTH,y);}ctx.strokeStyle=color;ctx.lineWidth=1;ctx.stroke();};
-  if(bg==='grid') lines(40,'#d9e5e1');
-  if(bg==='lines'){ctx.beginPath();for(let y=40;y<HEIGHT;y+=40){ctx.moveTo(0,y);ctx.lineTo(WIDTH,y);}ctx.strokeStyle='#d9e5e1';ctx.lineWidth=1;ctx.stroke();}
+  if(bg==='grid') lines(24,'#d9e5e1');
+  if(bg==='lines'){ctx.beginPath();for(let y=28;y<HEIGHT;y+=28){ctx.moveTo(0,y);ctx.lineTo(WIDTH,y);}ctx.strokeStyle='#d9e5e1';ctx.lineWidth=1;ctx.stroke();}
   if(bg==='coords'){
     lines(20,'#e7efec');
     lines(100,'#aac5bc');
