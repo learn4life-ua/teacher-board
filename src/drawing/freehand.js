@@ -1,5 +1,8 @@
 import { activePage, uid } from '../core/state.js';
 import { pushHistory } from '../core/history.js';
+import { MAX_STROKES_PER_PAGE, MAX_POINTS_PER_STROKE } from '../core/content-limits.js';
+
+const MIN_POINT_DISTANCE = 0.5;
 
 export class FreehandDrawing {
   constructor({ state, canvas, scene, onChange }) {
@@ -27,6 +30,8 @@ export class FreehandDrawing {
 
   down(e) {
     if (!['pen', 'marker', 'eraser'].includes(this.state.tool) || this.current) return;
+    const page=activePage(this.state);
+    if(page.strokes.length>=MAX_STROKES_PER_PAGE)return;
     e.preventDefault();
     pushHistory(this.state);
     const p = this.scene.pointFromEvent(e);
@@ -38,13 +43,15 @@ export class FreehandDrawing {
       width: this.state.lineWidth,
       points: [p]
     };
-    activePage(this.state).strokes.push(this.current);
+    page.strokes.push(this.current);
     this.render();
   }
 
   move(e) {
-    if (!this.current || !this.matchesPointer(e)) return;
-    this.current.points.push(this.scene.pointFromEvent(e));
+    if (!this.current || !this.matchesPointer(e) || this.current.points.length>=MAX_POINTS_PER_STROKE) return;
+    const p=this.scene.pointFromEvent(e),last=this.current.points.at(-1);
+    if(last&&Math.hypot(p.x-last.x,p.y-last.y)<MIN_POINT_DISTANCE)return;
+    this.current.points.push(p);
     this.render();
   }
 
