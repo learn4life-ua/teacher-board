@@ -1,5 +1,6 @@
 import { activePage, uid } from '../core/state.js';
 import { pushHistory } from '../core/history.js';
+import { MAX_GRAPH_EXPRESSION_LENGTH, limitText } from '../core/content-limits.js';
 
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 const MAX_GRID_LINES = 240;
@@ -31,7 +32,9 @@ function safeColor(value){
 }
 
 function normalizeExpression(expr) {
-  return String(expr || 'x')
+  const raw=String(expr||'x');
+  if(raw.length>MAX_GRAPH_EXPRESSION_LENGTH)throw new Error(`Вираз задовгий: максимум ${MAX_GRAPH_EXPRESSION_LENGTH} символів`);
+  return raw
     .trim()
     .toLowerCase()
     .replaceAll('π', ' pi ')
@@ -217,8 +220,9 @@ export function evaluateExpression(expression, x) {
 }
 
 export function createGraphObject(state, expression = 'x') {
+  const safeExpression=limitText(expression,MAX_GRAPH_EXPRESSION_LENGTH,'x').trim()||'x';
   return {
-    id: uid('graph'), kind: 'graph', expression,
+    id: uid('graph'), kind: 'graph', expression:safeExpression,
     x: 260, y: 120, w: 760, h: 560,
     rotation: 0, color: state.color,
     xMin: -10, xMax: 10, yMin: -10, yMax: 10,
@@ -272,7 +276,7 @@ export function graphSvg(g) {
     error = 'Некоректний вираз';
   }
 
-  const rawTitle=String(g.expression??'x');
+  const rawTitle=limitText(g.expression,MAX_GRAPH_EXPRESSION_LENGTH,'x');
   const title=escapeText(rawTitle);
   const ariaTitle=escapeAttribute(rawTitle);
   const curveColor=safeColor(g.color);
