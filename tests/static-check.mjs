@@ -58,6 +58,8 @@ else {
   if (!/src=["']src\/core\/export-bind\.js["']/.test(html)) fail('preview.html: не підключено PNG export binder.');
   if (!/src=["']src\/tools\/laser\.js["']/.test(html)) fail('preview.html: не підключено laser module.');
   if (!/src=["']src\/ui\/mobile-drawer\.js["']/.test(html)) fail('preview.html: не підключено touch-safe mobile drawer module.');
+  if (!/src=["']src\/ui\/input-limits\.js["']/.test(html)) fail('preview.html: не підключено input content limits.');
+  if (!/src=["']src\/ui\/capacity-guards\.js["']/.test(html)) fail('preview.html: не підключено runtime capacity guards.');
   if (/\b(?:v2|v3|fixes-v\d+)\.js\b/.test(html)) fail('preview.html не повинен підключати legacy patch-файли.');
 }
 
@@ -143,9 +145,11 @@ if(!rejected.includes('graph-error')) fail('Graph parser має відхилят
 
 const requiredModules = [
   'src/app.js','src/core/state.js','src/core/storage.js','src/core/history.js','src/core/scene.js',
-  'src/core/export-png.js','src/core/export-bind.js','src/tools/laser.js','src/ui/mobile-drawer.js',
-  'src/drawing/freehand.js','src/objects/object-manager.js','src/objects/shapes.js','src/objects/text.js',
-  'src/objects/images.js','src/math/graph.js','src/instruments/geometry-tools.js'
+  'src/core/content-limits.js','src/core/image-format.js','src/core/export-png.js','src/core/export-bind.js',
+  'src/tools/laser.js','src/ui/mobile-drawer.js','src/ui/input-limits.js','src/ui/capacity-guards.js',
+  'src/ui/dialogs.js','src/ui/notices.js','src/drawing/freehand.js','src/objects/object-manager.js',
+  'src/objects/shapes.js','src/objects/text.js','src/objects/images.js','src/math/graph.js',
+  'src/instruments/geometry-tools.js'
 ];
 for (const file of requiredModules) if (!exists(file)) fail(`Відсутній критичний модуль: ${file}`);
 
