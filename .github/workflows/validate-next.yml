@@ -36,6 +36,9 @@ jobs:
       - name: Check geometry bounds contract
         run: node tests/bounds-check.mjs
 
+      - name: Check content and structural limits
+        run: node tests/content-limits-check.mjs
+
       - name: Check page history contract
         run: node tests/history-check.mjs
 
