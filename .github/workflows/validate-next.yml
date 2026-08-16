@@ -57,6 +57,9 @@ jobs:
       - name: Check text rendering safety
         run: node tests/text-safety-check.mjs
 
+      - name: Check safe image format policy
+        run: node tests/image-policy-check.mjs
+
       - name: Check object edit panel contract
         shell: bash
         run: |
