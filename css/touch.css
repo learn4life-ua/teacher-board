@@ -149,61 +149,77 @@
   .status-toast{bottom:82px;font-size:15px;padding:12px 16px}
 }
 
-/* On phones the page tabs and page actions must not compete for one horizontal
-   strip. Tabs get their own scrollable row; actions remain fully tappable below. */
+/* Phone pagebar: tabs and actions occupy physically separate hit areas.
+   Absolute sectors avoid CSS-grid overlap on narrow Android viewports. */
 @media (max-width:560px){
   .app-shell{
     grid-template-rows:56px minmax(0,1fr) 106px;
   }
 
   .pagebar{
+    position:relative;
     z-index:120;
     isolation:isolate;
-    display:grid;
-    grid-template-columns:repeat(3,minmax(0,1fr));
-    grid-template-rows:44px 44px;
-    gap:6px;
-    padding:6px 8px;
+    display:block;
+    height:106px;
+    min-height:106px;
+    padding:0;
     overflow:hidden;
     background:#fff;
   }
 
   .pagebar .pages{
-    grid-column:1 / -1;
-    grid-row:1;
-    width:100%;
+    position:absolute;
+    left:8px;
+    right:8px;
+    top:6px;
+    height:44px;
     min-width:0!important;
-    max-width:100%;
+    max-width:none;
+    display:flex;
+    gap:6px;
     overflow-x:auto!important;
     overflow-y:hidden!important;
     overscroll-behavior-inline:contain;
     scrollbar-width:none;
-    position:relative;
     z-index:1;
   }
   .pagebar .pages::-webkit-scrollbar{display:none}
 
   .pagebar .page-tab{
     flex:0 0 auto;
+    height:40px;
     padding:7px 9px;
   }
 
   .pagebar #addPageBtn,
   .pagebar #renamePageBtn,
   .pagebar #deletePageBtn{
-    grid-row:2;
-    position:relative;
-    z-index:2;
-    width:100%;
-    min-width:0;
-    min-height:40px;
-    padding:6px 5px;
+    position:absolute!important;
+    bottom:6px;
+    z-index:3;
+    height:44px;
+    min-height:44px;
+    min-width:0!important;
+    margin:0!important;
+    padding:6px 4px;
     font-size:12px;
     line-height:1.15;
+    white-space:nowrap;
     overflow:hidden;
     text-overflow:ellipsis;
   }
-  .pagebar #addPageBtn{grid-column:1}
-  .pagebar #renamePageBtn{grid-column:2}
-  .pagebar #deletePageBtn{grid-column:3}
+
+  .pagebar #addPageBtn{
+    left:8px;
+    width:calc((100% - 28px)/3);
+  }
+  .pagebar #renamePageBtn{
+    left:calc(10px + (100% - 28px)/3);
+    width:calc((100% - 28px)/3);
+  }
+  .pagebar #deletePageBtn{
+    right:8px;
+    width:calc((100% - 28px)/3);
+  }
 }
