@@ -56,12 +56,15 @@ export class ObjectManager {
   addText(text, options={}) { if(!this.hasCapacity())return this.rejected('text');pushHistory(this.state); const obj={ id:uid('text'), kind:'text', text:limitText(text,MAX_TEXT_LENGTH,'Текст'), x:options.x??360,y:options.y??180,w:options.w??420,h:options.h??100,rotation:0,color:options.color||this.state.color,fontSize:options.fontSize||32 }; this.objects.push(obj); this.state.selection=obj.id; this.changed(); return obj; }
   addImage(src, naturalWidth=800, naturalHeight=600) {
     if(!this.hasCapacity())return this.rejected('image');
+    const undoBefore=[...this.state.history.undo],redoBefore=[...this.state.history.redo];
     pushHistory(this.state);
     const obj=createImageObject(src,naturalWidth,naturalHeight);
     this.objects.push(obj);this.state.selection=obj.id;
     const saved=this.changed();
     if(saved===false){
-      this.rollbackAdded(obj.id,{discardHistory:true,render:false});
+      this.rollbackAdded(obj.id,{discardHistory:false,render:false});
+      this.state.history.undo.splice(0,this.state.history.undo.length,...undoBefore);
+      this.state.history.redo.splice(0,this.state.history.redo.length,...redoBefore);
       this.changed();
       try{window.dispatchEvent(new CustomEvent('teacherboard:image-storage-failed'));}catch{}
       return this.rejected('image','storage');
