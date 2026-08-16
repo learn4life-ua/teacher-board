@@ -1,37 +1,67 @@
-.board-viewport{
-  width:calc(var(--scene-width,1600px) * var(--scene-zoom,1));
-  height:calc(var(--scene-height,900px) * var(--scene-zoom,1));
-}
+.phone-device-notice{display:none}
 
-@media (max-width:560px){
-  .app-shell{
-    height:auto!important;
-    min-height:0!important;
-    grid-template-rows:56px auto auto!important;
+@media (max-width:700px), (max-height:500px) and (pointer:coarse){
+  html,body{
+    min-height:100%;
+    background:#eef3f1!important;
   }
-
-  .workspace{
-    height:calc(var(--scene-height,1800px) * var(--scene-zoom,.25) + 16px);
-    min-height:0!important;
-    align-items:stretch;
+  body{
+    margin:0;
+    overflow:auto!important;
   }
-
-  .toolbar{
-    height:100%;
-    max-height:100%;
-    overflow-y:auto;
-    overscroll-behavior:contain;
+  .app-shell,
+  #mobilePanelBtn,
+  .shape-menu,
+  .status-toast,
+  dialog{
+    display:none!important;
   }
-
-  .board-wrap{
-    height:100%;
-    min-height:0!important;
-    padding:8px!important;
-    overflow:auto;
-    align-self:start;
+  .phone-device-notice{
+    min-height:100dvh;
+    display:grid;
+    place-items:center;
+    padding:24px;
+    box-sizing:border-box;
+    color:#18342f;
   }
-
-  .board-viewport{
-    margin:0 auto;
+  .phone-device-card{
+    width:min(100%,430px);
+    box-sizing:border-box;
+    padding:32px 24px;
+    border:1px solid #d6e2de;
+    border-radius:20px;
+    background:#fff;
+    box-shadow:0 16px 48px rgba(24,52,47,.12);
+    text-align:center;
+  }
+  .phone-device-icon{
+    width:64px;
+    height:64px;
+    display:grid;
+    place-items:center;
+    margin:0 auto 18px;
+    border-radius:18px;
+    background:#e7f2ef;
+    color:#174a3d;
+    font-size:34px;
+    line-height:1;
+  }
+  .phone-device-card h1{
+    margin:0 0 14px;
+    font-size:23px;
+    line-height:1.2;
+    color:#18342f;
+  }
+  .phone-device-card p{
+    margin:0;
+    color:#526b65;
+    font-size:16px;
+    line-height:1.55;
+  }
+  .phone-device-card p+p{margin-top:12px}
+  .phone-device-note{
+    margin-top:20px!important;
+    font-size:14px!important;
+    color:#71847f!important;
   }
 }
