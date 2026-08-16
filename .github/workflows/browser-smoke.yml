@@ -37,7 +37,7 @@ jobs:
           done
           cat /tmp/teacherboard-http.log
           exit 1
-      - name: Patch SVG text assertion compatibility
+      - name: Patch smoke compatibility and Android layout diagnostics
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -47,7 +47,19 @@ jobs:
           new = ".graph-title').last().textContent()"
           if old not in text:
               raise SystemExit('Expected SVG innerText assertion was not found')
-          path.write_text(text.replace(old, new, 1))
+          text = text.replace(old, new, 1)
+          needle = "  await page.click('#deletePageBtn');assert.equal(await page.locator('#confirmActionDialog').getAttribute('open')!==null,true,`${name}: delete dialog did not open`);"
+          diagnostic = """  if(name==='android'){
+    const layout=await page.evaluate(()=>{
+      const box=id=>{const el=document.querySelector(id);if(!el)return null;const r=el.getBoundingClientRect();const s=getComputedStyle(el);return {x:r.x,y:r.y,w:r.width,h:r.height,right:r.right,bottom:r.bottom,display:s.display,position:s.position,z:s.zIndex,minWidth:s.minWidth,maxWidth:s.maxWidth};};
+      return {viewport:{w:innerWidth,h:innerHeight},pagebar:box('.pagebar'),actions:box('.page-actions'),add:box('#addPageBtn'),rename:box('#renamePageBtn'),del:box('#deletePageBtn'),scene:box('#scene')};
+    });
+    console.log('[android-layout]',JSON.stringify(layout));
+  }
+  await page.click('#deletePageBtn');assert.equal(await page.locator('#confirmActionDialog').getAttribute('open')!==null,true,`${name}: delete dialog did not open`);"""
+          if needle not in text:
+              raise SystemExit('Expected delete click assertion was not found')
+          path.write_text(text.replace(needle, diagnostic, 1))
           PY
       - name: Run desktop/tablet/android smoke tests
         run: node tests/browser-smoke.mjs
