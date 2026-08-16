@@ -113,10 +113,16 @@ else{
 
 const previousStorage=globalThis.localStorage;
 try{
-  let written='';
-  globalThis.localStorage={setItem:(key,value)=>{written=`${key}:${value}`;},getItem:()=>null,removeItem:()=>{}};
-  if(saveState(createState())!==true)fail('saveState must return true after successful localStorage write.');
+  let written='',writes=0;
+  globalThis.localStorage={setItem:(key,value)=>{writes+=1;written=`${key}:${value}`;},getItem:()=>null,removeItem:()=>{}};
+  const stable=createState();
+  if(saveState(stable)!==true)fail('saveState must return true after successful localStorage write.');
   if(!written.startsWith('teacherboard.v2:'))fail('saveState did not write teacherboard.v2.');
+  if(saveState(stable)!==true)fail('Repeated identical saveState call must still report success.');
+  if(writes!==1)fail(`Identical autosave state must be deduplicated to one write, got ${writes}.`);
+  stable.color='#123456';
+  if(saveState(stable)!==true)fail('Changed state must still save successfully after deduplication.');
+  if(writes!==2)fail(`Changed state must trigger a new storage write, got ${writes} total writes.`);
 
   globalThis.localStorage={
     setItem:()=>{const error=new Error('quota');error.name='QuotaExceededError';throw error;},
@@ -135,4 +141,4 @@ if(errors.length){
   errors.forEach(error=>console.error(`- ${error}`));
   process.exit(1);
 }
-console.log('TeacherBoard storage check: OK (corrupt data, content limits, circle/arc, legacy number lines, quota handling)');
+console.log('TeacherBoard storage check: OK (corrupt data, content limits, circle/arc, legacy number lines, quota handling, write deduplication)');
