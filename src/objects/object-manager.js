@@ -52,7 +52,7 @@ export class ObjectManager {
 
   createShape(shape, box, options={}) { return { id:uid('shape'), kind:'shape', shape, x:box.x, y:box.y, w:clamp(box.w,options.minW??40,MAX_OBJECT_W), h:clamp(box.h,options.minH??40,MAX_OBJECT_H), rotation:options.rotation??0, color:options.color||this.state.color, lineWidth:options.lineWidth||this.state.lineWidth }; }
   addShape(shape, box, options={}) { if(!this.hasCapacity())return this.rejected('shape');pushHistory(this.state); const obj=this.createShape(shape,box,options); this.objects.push(obj); this.state.selection=obj.id; this.changed(); return obj; }
-  addGraph(expression='x') { if(!this.hasCapacity())return this.rejected('graph');pushHistory(this.state); const obj=createGraphObject(this.state,limitText(expression,MAX_GRAPH_EXPRESSION_LENGTH,'x')); this.objects.push(obj); this.state.selection=obj.id; this.changed(); return obj; }
+  addGraph(expression='x', options={}) { if(!this.hasCapacity())return this.rejected('graph');pushHistory(this.state); const obj=createGraphObject(this.state,limitText(expression,MAX_GRAPH_EXPRESSION_LENGTH,'x')); Object.assign(obj,options); obj.expression=limitText(obj.expression,MAX_GRAPH_EXPRESSION_LENGTH,'x').trim()||'x'; this.objects.push(obj); this.state.selection=obj.id; this.changed(); return obj; }
   addText(text, options={}) { if(!this.hasCapacity())return this.rejected('text');pushHistory(this.state); const obj={ id:uid('text'), kind:'text', text:limitText(text,MAX_TEXT_LENGTH,'Текст'), x:options.x??360,y:options.y??180,w:options.w??420,h:options.h??100,rotation:0,color:options.color||this.state.color,fontSize:options.fontSize||32 }; this.objects.push(obj); this.state.selection=obj.id; this.changed(); return obj; }
   addImage(src, naturalWidth=800, naturalHeight=600) {
     if(!this.hasCapacity())return this.rejected('image');
@@ -120,6 +120,15 @@ export class ObjectManager {
     el.querySelector('.object-delete')?.addEventListener('click',e=>{e.stopPropagation();this.deleteSelected();});
     return el;
   }
+  updateElementGeometry(obj){
+    const el=[...this.layer.children].find(node=>node.dataset?.id===obj.id);
+    if(!el){this.render();return;}
+    Object.assign(el.style,{left:`${obj.x}px`,top:`${obj.y}px`,width:`${obj.w}px`,height:`${obj.h}px`,transform:`rotate(${obj.rotation||0}deg)`});
+    if(obj.kind==='text'){
+      const content=el.querySelector('.text-object-content');
+      if(content)content.style.fontSize=`${obj.fontSize||32}px`;
+    }
+  }
   pointerDownObject(e,obj){if(this.state.tool!=='select'||obj.locked||this.drag)return;e.preventDefault();e.stopPropagation();this.select(obj.id);const handle=e.target.closest('[data-handle]')?.dataset.handle;this.drag={mode:handle||'move',id:obj.id,pointerId:e.pointerId??null,startX:e.clientX,startY:e.clientY,x:obj.x,y:obj.y,w:obj.w,h:obj.h,aspect:obj.w/Math.max(1,obj.h),rotation:obj.rotation||0,center:{x:obj.x+obj.w/2,y:obj.y+obj.h/2},historyPushed:false};}
   bindGlobalPointerEvents(){window.addEventListener('pointermove',e=>this.pointerMove(e));window.addEventListener('pointerup',e=>this.pointerUp(e));window.addEventListener('pointercancel',e=>this.pointerUp(e));window.addEventListener('blur',()=>this.pointerUp());}
   matchesPointer(e){return !this.drag||this.drag.pointerId===null||e?.pointerId===undefined||e.pointerId===this.drag.pointerId;}
@@ -140,8 +149,8 @@ export class ObjectManager {
     }else if(this.drag.mode==='rotate'){
       const rect=this.layer.getBoundingClientRect(),cx=rect.left+this.drag.center.x*scale,cy=rect.top+this.drag.center.y*scale;obj.rotation=Math.atan2(e.clientY-cy,e.clientX-cx)*180/Math.PI+90;
     }
-    this.render();
+    this.updateElementGeometry(obj);
   }
   pointerUp(e){if(!this.drag||!this.matchesPointer(e))return;const changed=this.drag.historyPushed;this.drag=null;if(changed)this.changed();}
-  changed(){this.render();return this.onChange?.();}
+  changed(){if(this.onChange)return this.onChange();this.render();return undefined;}
 }
