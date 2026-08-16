@@ -148,3 +148,62 @@
   .page-name-dialog input{min-height:50px}
   .status-toast{bottom:82px;font-size:15px;padding:12px 16px}
 }
+
+/* On phones the page tabs and page actions must not compete for one horizontal
+   strip. Tabs get their own scrollable row; actions remain fully tappable below. */
+@media (max-width:560px){
+  .app-shell{
+    grid-template-rows:56px minmax(0,1fr) 106px;
+  }
+
+  .pagebar{
+    z-index:120;
+    isolation:isolate;
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    grid-template-rows:44px 44px;
+    gap:6px;
+    padding:6px 8px;
+    overflow:hidden;
+    background:#fff;
+  }
+
+  .pagebar .pages{
+    grid-column:1 / -1;
+    grid-row:1;
+    width:100%;
+    min-width:0!important;
+    max-width:100%;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    overscroll-behavior-inline:contain;
+    scrollbar-width:none;
+    position:relative;
+    z-index:1;
+  }
+  .pagebar .pages::-webkit-scrollbar{display:none}
+
+  .pagebar .page-tab{
+    flex:0 0 auto;
+    padding:7px 9px;
+  }
+
+  .pagebar #addPageBtn,
+  .pagebar #renamePageBtn,
+  .pagebar #deletePageBtn{
+    grid-row:2;
+    position:relative;
+    z-index:2;
+    width:100%;
+    min-width:0;
+    min-height:40px;
+    padding:6px 5px;
+    font-size:12px;
+    line-height:1.15;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .pagebar #addPageBtn{grid-column:1}
+  .pagebar #renamePageBtn{grid-column:2}
+  .pagebar #deletePageBtn{grid-column:3}
+}
