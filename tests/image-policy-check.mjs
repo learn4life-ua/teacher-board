@@ -31,6 +31,7 @@ if(!images.includes("from '../core/image-format.js'"))fail('Image object module 
 if(!storage.includes("from './image-format.js'"))fail('Storage must reuse core image policy.');
 if(!images.includes('teacherboard:image-format-rejected')||!images.includes('queueMicrotask'))fail('Unsupported image formats must surface a precise deferred notice event.');
 if(!manager.includes('rollbackAdded')||!manager.includes('teacherboard:image-storage-failed')||!manager.includes('saved===false'))fail('Image insertion must roll back object/history after storage failure.');
+if(!manager.includes('undoBefore')||!manager.includes('redoBefore')||!manager.includes('history.undo.splice')||!manager.includes('history.redo.splice'))fail('Failed image insertion must restore both undo and redo stacks exactly.');
 if(!guards.includes('teacherboard:image-storage-failed')||!guards.includes('teacherboard:image-format-rejected'))fail('Image failure events must have user-visible notices.');
 
 if(errors.length){
