@@ -1,6 +1,7 @@
 import process from 'node:process';
 import { createState } from '../src/core/state.js';
 import { normalizeStoredState, saveState } from '../src/core/storage.js';
+import { MAX_TEXT_LENGTH, MAX_GRAPH_EXPRESSION_LENGTH } from '../src/core/content-limits.js';
 import { shapeSvg } from '../src/objects/shapes.js';
 
 const errors=[];
@@ -22,13 +23,16 @@ const data={
       ],
       objects:[
         {id:'t1',kind:'text',text:'Тест',x:'12',y:'13'},
+        {id:'long-text',kind:'text',text:'Т'.repeat(MAX_TEXT_LENGTH+123)},
         {id:'g1',kind:'graph',expression:'x^2',xMin:5,xMax:5,yMin:'bad',yMax:'bad',majorStep:-4},
+        {id:'long-graph',kind:'graph',expression:'x+'.repeat(MAX_GRAPH_EXPRESSION_LENGTH)},
         {id:'i1',kind:'image',src:''},
         {id:'remote-image',kind:'image',src:'https://example.com/image.png'},
         {id:'bad',kind:'unknown'},
         {id:'bad-shape',kind:'shape',shape:'inventedShape'},
         {id:'shape1',kind:'shape',shape:'rect',lineWidth:999},
         {id:'circle1',kind:'shape',shape:'circle',w:120,h:220,lineWidth:4},
+        {id:'arc1',kind:'shape',shape:'circleArc',w:90,h:170,lineWidth:4},
         {id:'legacy-n5',kind:'shape',shape:'number5',lineWidth:4},
         {id:'legacy-n10',kind:'shape',shape:'number10',lineWidth:4},
         {id:'legacy-blank',kind:'shape',shape:'numberBlank',lineWidth:4}
@@ -61,12 +65,18 @@ else{
 
   const text=page.objects.find(o=>o.id==='t1');
   if(!text||text.fontSize!==32)fail(`Text default font size must be 32, got ${text?.fontSize}.`);
+  const longText=page.objects.find(o=>o.id==='long-text');
+  if(longText?.text.length!==MAX_TEXT_LENGTH)fail(`Persisted text must clamp to ${MAX_TEXT_LENGTH} chars, got ${longText?.text.length}.`);
   const graph=page.objects.find(o=>o.id==='g1');
   if(!graph||graph.xMin!==-10||graph.xMax!==10||graph.yMin!==-10||graph.yMax!==10||graph.majorStep!==.1)fail('Malformed graph ranges/step were not repaired.');
+  const longGraph=page.objects.find(o=>o.id==='long-graph');
+  if(longGraph?.expression.length!==MAX_GRAPH_EXPRESSION_LENGTH)fail(`Persisted graph expression must clamp to ${MAX_GRAPH_EXPRESSION_LENGTH} chars, got ${longGraph?.expression.length}.`);
   const shape=page.objects.find(o=>o.id==='shape1');
   if(!shape||shape.lineWidth!==40)fail(`Shape line width must clamp to 40, got ${shape?.lineWidth}.`);
   const circle=page.objects.find(o=>o.id==='circle1');
   if(!circle||circle.w!==220||circle.h!==220)fail(`Persisted circle must normalize to square bounds, got ${circle?.w}×${circle?.h}.`);
+  const arc=page.objects.find(o=>o.id==='arc1');
+  if(!arc||arc.w!==170||arc.h!==170)fail(`Compass arc must normalize to square bounds, got ${arc?.w}×${arc?.h}.`);
   if(circle&&!shapeSvg(circle).includes('<ellipse'))fail('Circle SVG renderer must remain available after storage normalization.');
   if(page.objects.some(o=>['i1','remote-image','bad','bad-shape'].includes(o.id)))fail('Invalid/remote image, unknown object or unsupported shape must be removed.');
 
@@ -125,4 +135,4 @@ if(errors.length){
   errors.forEach(error=>console.error(`- ${error}`));
   process.exit(1);
 }
-console.log('TeacherBoard storage check: OK (corrupt data, zoom, circle, legacy number lines, quota handling)');
+console.log('TeacherBoard storage check: OK (corrupt data, content limits, circle/arc, legacy number lines, quota handling)');
