@@ -35,10 +35,18 @@ export function shapeSvg(obj) {
 function arrowSvg(stroke,wrap){return wrap(`<line x1="5" y1="50" x2="92" y2="50" ${stroke}/><path d="M76 34 L94 50 L76 66" ${stroke}/>`);}
 
 function circleArcSvg(obj,stroke,wrap){
-  const start=(Number(obj.startDeg)||0)*Math.PI/180,end=(Number(obj.endDeg)||180)*Math.PI/180;
-  const x1=50+46*Math.cos(start),y1=50-46*Math.sin(start),x2=50+46*Math.cos(end),y2=50-46*Math.sin(end);
-  let delta=(Number(obj.endDeg)||180)-(Number(obj.startDeg)||0);while(delta<0)delta+=360;while(delta>360)delta-=360;
-  const large=delta>180?1:0;
+  const startDeg=Number.isFinite(Number(obj.startDeg))?Number(obj.startDeg):0;
+  const endDeg=Number.isFinite(Number(obj.endDeg))?Number(obj.endDeg):180;
+  let delta=endDeg-startDeg;
+  while(delta<0)delta+=360;
+  while(delta>360)delta-=360;
+  const start=startDeg*Math.PI/180;
+  const x1=50+46*Math.cos(start),y1=50-46*Math.sin(start);
+  if(Math.abs(delta-360)<1e-9){
+    const opposite=start+Math.PI,xMid=50+46*Math.cos(opposite),yMid=50-46*Math.sin(opposite);
+    return wrap(`<path d="M${x1.toFixed(2)} ${y1.toFixed(2)} A46 46 0 1 0 ${xMid.toFixed(2)} ${yMid.toFixed(2)} A46 46 0 1 0 ${x1.toFixed(2)} ${y1.toFixed(2)}" ${stroke}/>`);
+  }
+  const end=endDeg*Math.PI/180,x2=50+46*Math.cos(end),y2=50-46*Math.sin(end),large=delta>180?1:0;
   return wrap(`<path d="M${x1.toFixed(2)} ${y1.toFixed(2)} A46 46 0 ${large} 0 ${x2.toFixed(2)} ${y2.toFixed(2)}" ${stroke}/>`);
 }
 
