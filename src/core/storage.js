@@ -23,6 +23,7 @@ const POSITION_X_MIN = -3200;
 const POSITION_X_MAX = 3200;
 const POSITION_Y_MIN = -1800;
 const POSITION_Y_MAX = 1800;
+let lastSavedRaw = null;
 const LEGACY_NUMBER_LINES = {
   number5: { numberMin: -5, numberMax: 5, showLabels: true },
   number10: { numberMin: -10, numberMax: 10, showLabels: true },
@@ -246,6 +247,7 @@ function migrateLegacy(fallback) {
     try {
       localStorage.setItem(STORAGE_KEY, nextRaw);
       localStorage.setItem(MIGRATION_FLAG, '1');
+      lastSavedRaw = nextRaw;
     } catch (error) {
       localStorage.removeItem(STORAGE_KEY);
       try { localStorage.setItem(LEGACY_KEY, raw); } catch {}
@@ -265,7 +267,7 @@ export function loadState(fallback) {
     if (raw) {
       const data = JSON.parse(raw);
       const normalized=normalizeStoredState(data,fallback);
-      if(normalized)return normalized;
+      if(normalized){lastSavedRaw=raw;return normalized;}
     }
   } catch {}
 
@@ -274,7 +276,10 @@ export function loadState(fallback) {
 
 export function saveState(state) {
   try {
-    localStorage.setItem(STORAGE_KEY, serializedState(state));
+    const raw=serializedState(state);
+    if(raw===lastSavedRaw)return true;
+    localStorage.setItem(STORAGE_KEY, raw);
+    lastSavedRaw=raw;
     return true;
   } catch (error) {
     try {
@@ -286,4 +291,5 @@ export function saveState(state) {
 
 export function clearSavedState() {
   localStorage.removeItem(STORAGE_KEY);
+  lastSavedRaw=null;
 }
