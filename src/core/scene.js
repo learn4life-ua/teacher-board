@@ -55,14 +55,16 @@ export class Scene {
 
   applyDimensions() {
     const { width, height } = this.size();
+    const shell = this.scene.closest('.app-shell');
+    for (const target of [this.viewport, shell].filter(Boolean)) {
+      target.style.setProperty('--scene-width', `${width}px`);
+      target.style.setProperty('--scene-height', `${height}px`);
+    }
     if (width === this.lastWidth && height === this.lastHeight) return;
     this.lastWidth = width;
     this.lastHeight = height;
 
     Object.assign(this.scene.style, { width: `${width}px`, height: `${height}px` });
-    this.viewport.style.setProperty('--scene-width', `${width}px`);
-    this.viewport.style.setProperty('--scene-height', `${height}px`);
-
     const canvas = this.scene.querySelector('canvas');
     if (canvas && (canvas.width !== width || canvas.height !== height)) {
       canvas.width = width;
@@ -79,7 +81,8 @@ export class Scene {
     this.state.zoom = z;
     this.scene.style.transform = `scale(${z})`;
     this.scene.style.transformOrigin = 'top left';
-    this.viewport.style.setProperty('--scene-zoom', z);
+    const shell = this.scene.closest('.app-shell');
+    for (const target of [this.viewport, shell].filter(Boolean)) target.style.setProperty('--scene-zoom', z);
     if (this.zoomLabel) this.zoomLabel.textContent = `${Math.round(z * 100)}%`;
   }
 
