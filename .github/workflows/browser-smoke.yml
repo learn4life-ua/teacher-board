@@ -37,5 +37,17 @@ jobs:
           done
           cat /tmp/teacherboard-http.log
           exit 1
+      - name: Patch SVG text assertion compatibility
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('tests/browser-smoke.mjs')
+          text = path.read_text()
+          old = ".graph-title').last().innerText()"
+          new = ".graph-title').last().textContent()"
+          if old not in text:
+              raise SystemExit('Expected SVG innerText assertion was not found')
+          path.write_text(text.replace(old, new, 1))
+          PY
       - name: Run desktop/tablet/android smoke tests
         run: node tests/browser-smoke.mjs
