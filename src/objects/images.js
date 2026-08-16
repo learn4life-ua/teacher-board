@@ -8,7 +8,7 @@ const SMALL_FILE_BYTES = 900_000;
 export { isSafeImageType, isSafeImageDataUrl };
 
 function rejectImageFormat(message='Непідтримуваний формат зображення'){
-  try{window.dispatchEvent(new CustomEvent('teacherboard:image-format-rejected'));}catch{}
+  try{queueMicrotask(()=>window.dispatchEvent(new CustomEvent('teacherboard:image-format-rejected')));}catch{}
   throw new Error(message);
 }
 
