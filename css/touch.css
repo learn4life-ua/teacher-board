@@ -133,6 +133,8 @@
   font-weight:700;
 }
 
+.page-actions{display:contents}
+
 @media (pointer:coarse){
   .object-handle{width:24px;height:24px}
   .resize-handle{right:-16px;bottom:-16px}
@@ -149,8 +151,8 @@
   .status-toast{bottom:82px;font-size:15px;padding:12px 16px}
 }
 
-/* Phone pagebar: one scrollable tab row plus one fixed three-button row.
-   Force grid here so inherited flex rules cannot distort hit areas. */
+/* Phone pagebar has two independent layout containers: scrollable tabs and
+   a three-button action grid. This prevents hit-area overlap on Android. */
 @media (max-width:560px){
   .app-shell{
     grid-template-rows:56px minmax(0,1fr) auto;
@@ -160,9 +162,9 @@
     position:relative;
     z-index:120;
     isolation:isolate;
-    display:grid!important;
-    grid-template-columns:repeat(3,minmax(0,1fr));
-    grid-template-rows:44px 46px;
+    display:flex!important;
+    flex-direction:column;
+    align-items:stretch;
     gap:6px;
     min-height:108px;
     padding:6px 8px;
@@ -171,8 +173,7 @@
   }
 
   .pagebar .pages{
-    grid-column:1 / -1;
-    grid-row:1;
+    flex:0 0 44px;
     display:flex!important;
     gap:6px;
     width:100%;
@@ -184,7 +185,7 @@
     scrollbar-width:none;
     position:relative!important;
     inset:auto!important;
-    height:auto!important;
+    height:44px!important;
     z-index:1;
   }
   .pagebar .pages::-webkit-scrollbar{display:none}
@@ -195,16 +196,23 @@
     padding:7px 9px;
   }
 
-  .pagebar #addPageBtn,
-  .pagebar #renamePageBtn,
-  .pagebar #deletePageBtn{
+  .pagebar .page-actions{
+    flex:0 0 46px;
+    display:grid!important;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:6px;
+    width:100%;
+    min-width:0;
+    position:relative;
+    z-index:2;
+  }
+
+  .pagebar .page-actions button{
     position:relative!important;
     inset:auto!important;
     bottom:auto!important;
     right:auto!important;
     left:auto!important;
-    grid-row:2;
-    z-index:2;
     width:100%!important;
     height:44px!important;
     min-height:44px!important;
@@ -217,7 +225,6 @@
     overflow:hidden;
     text-overflow:ellipsis;
   }
-  .pagebar #addPageBtn{grid-column:1}
-  .pagebar #renamePageBtn{grid-column:2}
-  .pagebar #deletePageBtn{grid-column:3}
+
+  .pagebar #autosaveState{display:none!important}
 }
