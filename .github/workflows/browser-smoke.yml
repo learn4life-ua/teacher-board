@@ -49,14 +49,7 @@ jobs:
               raise SystemExit('Expected SVG innerText assertion was not found')
           text = text.replace(old, new, 1)
           needle = "  await page.click('#deletePageBtn');assert.equal(await page.locator('#confirmActionDialog').getAttribute('open')!==null,true,`${name}: delete dialog did not open`);"
-          diagnostic = """  if(name==='android'){
-    const layout=await page.evaluate(()=>{
-      const box=id=>{const el=document.querySelector(id);if(!el)return null;const r=el.getBoundingClientRect();const s=getComputedStyle(el);return {x:r.x,y:r.y,w:r.width,h:r.height,right:r.right,bottom:r.bottom,display:s.display,position:s.position,z:s.zIndex,minWidth:s.minWidth,maxWidth:s.maxWidth};};
-      return {viewport:{w:innerWidth,h:innerHeight},pagebar:box('.pagebar'),actions:box('.page-actions'),add:box('#addPageBtn'),rename:box('#renamePageBtn'),del:box('#deletePageBtn'),scene:box('#scene')};
-    });
-    console.log('[android-layout]',JSON.stringify(layout));
-  }
-  await page.click('#deletePageBtn');assert.equal(await page.locator('#confirmActionDialog').getAttribute('open')!==null,true,`${name}: delete dialog did not open`);"""
+          diagnostic = "  if(name==='android'){\n    const layout=await page.evaluate(()=>{\n      const box=selector=>{const el=document.querySelector(selector);if(!el)return null;const r=el.getBoundingClientRect();const s=getComputedStyle(el);return {x:r.x,y:r.y,w:r.width,h:r.height,right:r.right,bottom:r.bottom,display:s.display,position:s.position,z:s.zIndex,minWidth:s.minWidth,maxWidth:s.maxWidth};};\n      return {viewport:{w:innerWidth,h:innerHeight},pagebar:box('.pagebar'),actions:box('.page-actions'),add:box('#addPageBtn'),rename:box('#renamePageBtn'),del:box('#deletePageBtn'),scene:box('#scene')};\n    });\n    console.log('[android-layout]',JSON.stringify(layout));\n  }\n" + needle
           if needle not in text:
               raise SystemExit('Expected delete click assertion was not found')
           path.write_text(text.replace(needle, diagnostic, 1))
