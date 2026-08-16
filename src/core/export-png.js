@@ -1,6 +1,6 @@
 const WIDTH=1600, HEIGHT=900;
 
-function safeName(value){return String(value||'teacherboard').replace(/[\\/:*?"<>|]+/g,'-').trim()||'teacherboard';}
+export function safeExportName(value){return String(value||'teacherboard').replace(/[\\/:*?"<>|]+/g,'-').trim()||'teacherboard';}
 function num(value,fallback=0){const n=parseFloat(value);return Number.isFinite(n)?n:fallback;}
 function rotationOf(el){const m=(el.style.transform||'').match(/rotate\(([-\d.]+)deg\)/);return m?Number(m[1])||0:0;}
 function loadImage(src){return new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=reject;img.src=src;});}
@@ -72,10 +72,15 @@ async function drawObjects(ctx,objectLayer){
 }
 async function drawInstruments(ctx,instrumentLayer){for(const el of instrumentLayer.querySelectorAll('.geometry-tool'))await drawSvgBox(ctx,el);}
 
-export async function exportScenePng({scene,canvas,objectLayer,instrumentLayer,fileName}){
+export async function renderSceneCanvas({scene,canvas,objectLayer,instrumentLayer}){
   const out=document.createElement('canvas');out.width=WIDTH;out.height=HEIGHT;const ctx=out.getContext('2d');
   drawBackground(ctx,scene.dataset.background||'clean');ctx.drawImage(canvas,0,0,WIDTH,HEIGHT);await drawObjects(ctx,objectLayer);await drawInstruments(ctx,instrumentLayer);
+  return out;
+}
+
+export async function exportScenePng({scene,canvas,objectLayer,instrumentLayer,fileName}){
+  const out=await renderSceneCanvas({scene,canvas,objectLayer,instrumentLayer});
   const blob=await new Promise(resolve=>out.toBlob(resolve,'image/png'));
   if(!blob)throw new Error('Не вдалося сформувати PNG');
-  const url=URL.createObjectURL(blob);try{const a=document.createElement('a');a.download=`${safeName(fileName)}.png`;a.href=url;document.body.appendChild(a);a.click();a.remove();}finally{setTimeout(()=>URL.revokeObjectURL(url),1000);}
+  const url=URL.createObjectURL(blob);try{const a=document.createElement('a');a.download=`${safeExportName(fileName)}.png`;a.href=url;document.body.appendChild(a);a.click();a.remove();}finally{setTimeout(()=>URL.revokeObjectURL(url),1000);}
 }
