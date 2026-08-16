@@ -76,6 +76,13 @@ if(panel&&scrim&&toggle){
     if(media.matches&&panel.contains(event.target))requestAnimationFrame(fitVisualViewport);
   });
 
+  panel.addEventListener('click',event=>{
+    if(!media.matches)return;
+    const action=event.target.closest('.instrument-btn,#addGraphBtn,#addTextBtn');
+    if(!action)return;
+    requestAnimationFrame(()=>document.body.classList.remove('side-panel-open'));
+  });
+
   document.addEventListener('pointerdown',event=>{
     if(!media.matches||!document.body.classList.contains('side-panel-open'))return;
     const target=event.target;
