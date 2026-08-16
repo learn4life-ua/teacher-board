@@ -1,6 +1,7 @@
 import { activePage, uid } from '../core/state.js';
 import { pushHistory } from '../core/history.js';
 import { sceneDeltaFromClient, sceneDeltaToLocalAxes } from '../core/scene.js';
+import { MAX_TEXT_LENGTH, MAX_GRAPH_EXPRESSION_LENGTH, limitText } from '../core/content-limits.js';
 import { shapeSvg } from './shapes.js';
 import { graphSvg, createGraphObject } from '../math/graph.js';
 import { textMarkup } from './text.js';
@@ -47,8 +48,8 @@ export class ObjectManager {
 
   createShape(shape, box, options={}) { return { id:uid('shape'), kind:'shape', shape, x:box.x, y:box.y, w:clamp(box.w,options.minW??40,MAX_OBJECT_W), h:clamp(box.h,options.minH??40,MAX_OBJECT_H), rotation:options.rotation??0, color:options.color||this.state.color, lineWidth:options.lineWidth||this.state.lineWidth }; }
   addShape(shape, box, options={}) { pushHistory(this.state); const obj=this.createShape(shape,box,options); this.objects.push(obj); this.state.selection=obj.id; this.changed(); return obj; }
-  addGraph(expression='x') { pushHistory(this.state); const obj=createGraphObject(this.state,expression); this.objects.push(obj); this.state.selection=obj.id; this.changed(); return obj; }
-  addText(text, options={}) { pushHistory(this.state); const obj={ id:uid('text'), kind:'text', text:String(text||'Текст'), x:options.x??360,y:options.y??180,w:options.w??420,h:options.h??100,rotation:0,color:options.color||this.state.color,fontSize:options.fontSize||32 }; this.objects.push(obj); this.state.selection=obj.id; this.changed(); return obj; }
+  addGraph(expression='x') { pushHistory(this.state); const obj=createGraphObject(this.state,limitText(expression,MAX_GRAPH_EXPRESSION_LENGTH,'x')); this.objects.push(obj); this.state.selection=obj.id; this.changed(); return obj; }
+  addText(text, options={}) { pushHistory(this.state); const obj={ id:uid('text'), kind:'text', text:limitText(text,MAX_TEXT_LENGTH,'Текст'), x:options.x??360,y:options.y??180,w:options.w??420,h:options.h??100,rotation:0,color:options.color||this.state.color,fontSize:options.fontSize||32 }; this.objects.push(obj); this.state.selection=obj.id; this.changed(); return obj; }
   addImage(src, naturalWidth=800, naturalHeight=600) { pushHistory(this.state); const obj=createImageObject(src,naturalWidth,naturalHeight); this.objects.push(obj); this.state.selection=obj.id; this.changed(); return obj; }
   addSegment(a,b,options={}) { return this.addSegments([{a,b}],options)[0]; }
   addSegments(segments,options={}) { if(!segments.length)return[]; pushHistory(this.state); const created=segments.map(({a,b})=>{ const dx=b.x-a.x,dy=b.y-a.y,length=clamp(Math.hypot(dx,dy),8,MAX_OBJECT_W),angle=Math.atan2(dy,dx)*180/Math.PI; const obj=this.createShape('segment',{x:(a.x+b.x)/2-length/2,y:(a.y+b.y)/2-10,w:length,h:20},{minW:8,minH:20,rotation:angle,color:options.color,lineWidth:options.lineWidth}); this.objects.push(obj); return obj; }); this.state.selection=created.at(-1)?.id||null; this.changed(); return created; }
@@ -58,7 +59,14 @@ export class ObjectManager {
   selected(){return this.objects.find(o=>o.id===this.state.selection)||null;}
   select(id){const obj=this.objects.find(o=>o.id===id);this.state.selection=obj?.locked?null:(id||null);this.render();}
   deleteSelected(){const id=this.state.selection;if(!id)return;const i=this.objects.findIndex(o=>o.id===id);if(i<0||this.objects[i].locked)return;pushHistory(this.state);this.objects.splice(i,1);this.state.selection=null;this.changed();}
-  updateSelected(patch){const obj=this.selected();if(!obj||obj.locked)return false;const entries=Object.entries(patch||{});if(!entries.some(([key,value])=>obj[key]!==value))return false;pushHistory(this.state);Object.assign(obj,patch);this.changed();return true;}
+  updateSelected(patch){
+    const obj=this.selected();if(!obj||obj.locked)return false;
+    const next={...(patch||{})};
+    if(obj.kind==='text'&&Object.hasOwn(next,'text'))next.text=limitText(next.text,MAX_TEXT_LENGTH,'');
+    if(obj.kind==='graph'&&Object.hasOwn(next,'expression'))next.expression=limitText(next.expression,MAX_GRAPH_EXPRESSION_LENGTH,'x').trim()||'x';
+    const entries=Object.entries(next);if(!entries.some(([key,value])=>obj[key]!==value))return false;
+    pushHistory(this.state);Object.assign(obj,next);this.changed();return true;
+  }
   requestEdit(obj){if(!obj||!['text','graph'].includes(obj.kind))return;this.select(obj.id);this.layer.dispatchEvent(new CustomEvent('objectedit',{detail:{id:obj.id,kind:obj.kind}}));}
 
   render(){this.layer.innerHTML='';for(const obj of this.objects)this.layer.appendChild(this.createElement(obj));}
