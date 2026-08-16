@@ -27,6 +27,16 @@ window.addEventListener('teacherboard:capacity-limit',event=>{
   const kind=event.detail?.kind;
   const message=kind==='objects'
     ? 'На цій сторінці досягнуто безпечний ліміт об’єктів.'
-    : 'Досягнуто безпечний ліміт елементів дошки.';
+    : kind==='strokes'
+      ? 'На цій сторінці досягнуто безпечний ліміт рукописних штрихів.'
+      : 'Досягнуто безпечний ліміт елементів дошки.';
   showNotice(message,{type:'error',duration:4200});
+});
+
+window.addEventListener('teacherboard:image-storage-failed',()=>{
+  showNotice('Зображення не збережено: сховище браузера заповнене. Вставку автоматично скасовано.',{type:'error',duration:5200});
+});
+
+window.addEventListener('teacherboard:image-format-rejected',()=>{
+  showNotice('Цей формат не підтримується. Використовуйте PNG, JPEG, WebP, GIF або AVIF.',{type:'error',duration:4800});
 });
