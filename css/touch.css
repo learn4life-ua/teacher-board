@@ -1,3 +1,7 @@
+.app-shell{
+  height:100dvh;
+}
+
 .scene-object:not(.locked-object),
 .scene-object:not(.locked-object) .object-handle,
 .scene-object:not(.locked-object) .object-edit,
