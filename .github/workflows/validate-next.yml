@@ -33,6 +33,9 @@ jobs:
       - name: Check shape geometry regressions
         run: node tests/shape-geometry-check.mjs
 
+      - name: Check dialog compatibility contract
+        run: node tests/dialog-compat-check.mjs
+
       - name: Check zoom coordinate contract
         run: node tests/zoom-check.mjs
 
