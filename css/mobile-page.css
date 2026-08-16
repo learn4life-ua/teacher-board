@@ -1,0 +1,37 @@
+.board-viewport{
+  width:calc(var(--scene-width,1600px) * var(--scene-zoom,1));
+  height:calc(var(--scene-height,900px) * var(--scene-zoom,1));
+}
+
+@media (max-width:560px){
+  .app-shell{
+    height:auto!important;
+    min-height:0!important;
+    grid-template-rows:56px auto auto!important;
+  }
+
+  .workspace{
+    height:calc(var(--scene-height,1800px) * var(--scene-zoom,.25) + 16px);
+    min-height:0!important;
+    align-items:stretch;
+  }
+
+  .toolbar{
+    height:100%;
+    max-height:100%;
+    overflow-y:auto;
+    overscroll-behavior:contain;
+  }
+
+  .board-wrap{
+    height:100%;
+    min-height:0!important;
+    padding:8px!important;
+    overflow:auto;
+    align-self:start;
+  }
+
+  .board-viewport{
+    margin:0 auto;
+  }
+}
