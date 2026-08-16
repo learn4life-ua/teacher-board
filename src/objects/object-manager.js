@@ -22,7 +22,7 @@ function aspectBox({width,height,ratio,minW,minH,maxW=MAX_OBJECT_W,maxH=MAX_OBJE
     if(w<minW){w=minW;h=w/r;}
   }
   if(w>maxW){w=maxW;h=w/r;}
-  if(h>maxH){h=maxH;w=h*r;}
+  if(h>maxH){h=maxH;w=h/r;}
   return {w,h};
 }
 
@@ -51,7 +51,7 @@ export function resizeObjectDimensions({kind,shape,startW,startH,dx,dy,rotation=
 }
 
 export class ObjectManager {
-  constructor({ state, layer, onChange }) { this.state=state; this.layer=layer; this.onChange=onChange; this.drag=null; this.lastRenderKey=''; this.bindGlobalPointerEvents(); }
+  constructor({ state, layer, onChange }) { this.state=state; this.layer=layer; this.onChange=onChange; this.drag=null; this.renderKeys=new Map(); this.bindGlobalPointerEvents(); }
   get objects() { return activePage(this.state).objects; }
 
   notifyCapacity(){try{window.dispatchEvent(new CustomEvent('teacherboard:capacity-limit',{detail:{kind:'objects',limit:MAX_OBJECTS_PER_PAGE}}));}catch{}}
@@ -107,8 +107,25 @@ export class ObjectManager {
   }
   requestEdit(obj){if(!obj||!['text','graph'].includes(obj.kind))return;this.select(obj.id);this.layer.dispatchEvent(new CustomEvent('objectedit',{detail:{id:obj.id,kind:obj.kind}}));}
 
-  renderKey(){return `${this.state.selection||''}::${this.objects.map(objectRenderKey).join('||')}`;}
-  render(){const key=this.renderKey();if(key===this.lastRenderKey)return;this.lastRenderKey=key;this.layer.innerHTML='';for(const obj of this.objects)this.layer.appendChild(this.createElement(obj));}
+  render(){
+    const pageId=activePage(this.state).id||'';
+    const desired=new Set(this.objects.map(obj=>obj.id));
+    for(const node of [...this.layer.children]){
+      const id=node.dataset?.id;
+      if(id&&!desired.has(id)){node.remove();this.renderKeys.delete(id);}
+    }
+    for(const obj of this.objects){
+      const key=`${pageId}|${objectRenderKey(obj)}|selected:${obj.id===this.state.selection?1:0}`;
+      let existing=[...this.layer.children].find(node=>node.dataset?.id===obj.id);
+      if(!existing||this.renderKeys.get(obj.id)!==key){
+        const next=this.createElement(obj);
+        if(existing)existing.replaceWith(next);else this.layer.appendChild(next);
+        existing=next;
+        this.renderKeys.set(obj.id,key);
+      }
+      this.layer.appendChild(existing);
+    }
+  }
   createElement(obj){
     const el=document.createElement('div');
     el.className=`scene-object${obj.kind==='graph'?' graph-object':''}${obj.kind==='text'?' text-object':''}${obj.kind==='image'?' image-object':''}${obj.locked?' locked-object':''}${obj.id===this.state.selection?' selected':''}`;
@@ -131,7 +148,7 @@ export class ObjectManager {
   }
   updateElementGeometry(obj){
     const el=[...this.layer.children].find(node=>node.dataset?.id===obj.id);
-    if(!el){this.lastRenderKey='';this.render();return;}
+    if(!el){this.renderKeys.delete(obj.id);this.render();return;}
     Object.assign(el.style,{left:`${obj.x}px`,top:`${obj.y}px`,width:`${obj.w}px`,height:`${obj.h}px`,transform:`rotate(${obj.rotation||0}deg)`});
     if(obj.kind==='text'){
       const content=el.querySelector('.text-object-content');
