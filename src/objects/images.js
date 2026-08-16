@@ -1,13 +1,11 @@
 import { uid } from '../core/state.js';
+import { isSafeImageType, isSafeImageDataUrl } from '../core/image-format.js';
 
 const MAX_SOURCE_DIMENSION = 1600;
 const TARGET_DATA_URL_LENGTH = 1_250_000;
 const SMALL_FILE_BYTES = 900_000;
-const SAFE_IMAGE_TYPES = new Set(['image/png','image/jpeg','image/webp','image/gif','image/avif']);
-const SAFE_DATA_URL = /^data:image\/(?:png|jpe?g|webp|gif|avif);/i;
 
-export function isSafeImageType(type){return SAFE_IMAGE_TYPES.has(String(type||'').toLowerCase());}
-export function isSafeImageDataUrl(src){return SAFE_DATA_URL.test(String(src||''));}
+export { isSafeImageType, isSafeImageDataUrl };
 
 export function createImageObject(src, naturalWidth = 800, naturalHeight = 600) {
   const maxW = 720, maxH = 520;
