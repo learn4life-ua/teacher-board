@@ -1,7 +1,5 @@
 import { showNotice } from './notices.js';
-
-export const MAX_TEXT_LENGTH = 20000;
-export const MAX_GRAPH_EXPRESSION_LENGTH = 300;
+import { MAX_TEXT_LENGTH, MAX_GRAPH_EXPRESSION_LENGTH } from '../core/content-limits.js';
 
 function bindLimit(selector,max,label){
   const input=document.querySelector(selector);
