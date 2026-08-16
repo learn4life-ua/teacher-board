@@ -60,6 +60,16 @@ export class ObjectManager {
   addCircle(center,radius,options={}) { const r=clamp(radius,12,MAX_OBJECT_H/2); return this.addShape('circle',{x:center.x-r,y:center.y-r,w:r*2,h:r*2},{minW:24,minH:24,color:options.color,lineWidth:options.lineWidth}); }
   addArc(center,radius,startDeg,endDeg,options={}) { if(!this.hasCapacity())return this.rejected('shape');pushHistory(this.state); const r=clamp(radius,12,MAX_OBJECT_H/2); const obj={ id:uid('arc'),kind:'shape',shape:'circleArc',x:center.x-r,y:center.y-r,w:r*2,h:r*2,rotation:Number(options.rotation)||0,color:options.color||this.state.color,lineWidth:options.lineWidth||this.state.lineWidth,startDeg,endDeg }; this.objects.push(obj); this.state.selection=obj.id; this.changed(); return obj; }
 
+  rollbackAdded(id,{discardHistory=true,render=true}={}){
+    if(!id)return false;
+    const index=this.objects.findIndex(item=>item.id===id);
+    if(index<0)return false;
+    this.objects.splice(index,1);
+    if(this.state.selection===id)this.state.selection=null;
+    if(discardHistory&&this.state.history.undo.length)this.state.history.undo.pop();
+    if(render)this.render();
+    return true;
+  }
   selected(){return this.objects.find(o=>o.id===this.state.selection)||null;}
   select(id){const obj=this.objects.find(o=>o.id===id);this.state.selection=obj?.locked?null:(id||null);this.render();}
   deleteSelected(){const id=this.state.selection;if(!id)return;const i=this.objects.findIndex(o=>o.id===id);if(i<0||this.objects[i].locked)return;pushHistory(this.state);this.objects.splice(i,1);this.state.selection=null;this.changed();}
