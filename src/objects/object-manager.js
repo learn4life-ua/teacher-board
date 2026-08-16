@@ -27,7 +27,7 @@ function aspectBox({width,height,ratio,minW,minH,maxW=MAX_OBJECT_W,maxH=MAX_OBJE
 }
 
 function objectRenderKey(obj){
-  const common=[obj.id,obj.kind,obj.x,obj.y,obj.w,obj.h,obj.rotation||0,obj.color||'',obj.lineWidth||0,obj.locked?1:0];
+  const common=[obj.id,obj.kind,obj.color||'',obj.lineWidth||0,obj.locked?1:0];
   if(obj.kind==='graph')return [...common,obj.expression||'',obj.xMin,obj.xMax,obj.yMin,obj.yMax,obj.majorStep].join('|');
   if(obj.kind==='text')return [...common,obj.fontSize||32,obj.text||''].join('|');
   if(obj.kind==='image')return [...common,String(obj.src||'').length,obj.legacyRaster?1:0].join('|');
@@ -107,6 +107,22 @@ export class ObjectManager {
   }
   requestEdit(obj){if(!obj||!['text','graph'].includes(obj.kind))return;this.select(obj.id);this.layer.dispatchEvent(new CustomEvent('objectedit',{detail:{id:obj.id,kind:obj.kind}}));}
 
+  findElement(id){return [...this.layer.children].find(node=>node.dataset?.id===id)||null;}
+  syncSelectionChrome(el,obj){
+    const selected=obj.id===this.state.selection&&!obj.locked;
+    el.classList.toggle('selected',selected);
+    if(!selected){
+      el.querySelectorAll('.object-edit,.object-handle,.object-delete').forEach(node=>node.remove());
+      return;
+    }
+    if(el.querySelector('.resize-handle'))return;
+    const edit=['text','graph'].includes(obj.kind)?'<button class="object-edit" type="button" title="Редагувати">✎</button>':'';
+    el.insertAdjacentHTML('beforeend',`${edit}<span class="object-handle resize-handle" data-handle="resize" title="Змінити розмір"></span><span class="object-handle rotate-handle" data-handle="rotate" title="Повернути">↻</span><button class="object-delete" type="button" title="Видалити">×</button>`);
+    el.querySelector('.object-edit')?.addEventListener('pointerdown',e=>e.stopPropagation());
+    el.querySelector('.object-edit')?.addEventListener('click',e=>{e.stopPropagation();this.requestEdit(obj);});
+    el.querySelector('.object-delete')?.addEventListener('pointerdown',e=>e.stopPropagation());
+    el.querySelector('.object-delete')?.addEventListener('click',e=>{e.stopPropagation();this.deleteSelected();});
+  }
   render(){
     const pageId=activePage(this.state).id||'';
     const desired=new Set(this.objects.map(obj=>obj.id));
@@ -115,41 +131,34 @@ export class ObjectManager {
       if(id&&!desired.has(id)){node.remove();this.renderKeys.delete(id);}
     }
     for(const obj of this.objects){
-      const key=`${pageId}|${objectRenderKey(obj)}|selected:${obj.id===this.state.selection?1:0}`;
-      let existing=[...this.layer.children].find(node=>node.dataset?.id===obj.id);
+      const key=`${pageId}|${objectRenderKey(obj)}`;
+      let existing=this.findElement(obj.id);
       if(!existing||this.renderKeys.get(obj.id)!==key){
         const next=this.createElement(obj);
         if(existing)existing.replaceWith(next);else this.layer.appendChild(next);
         existing=next;
         this.renderKeys.set(obj.id,key);
+      }else{
+        this.updateElementGeometry(obj,existing);
       }
-      this.layer.appendChild(existing);
+      this.syncSelectionChrome(existing,obj);
     }
   }
   createElement(obj){
     const el=document.createElement('div');
-    el.className=`scene-object${obj.kind==='graph'?' graph-object':''}${obj.kind==='text'?' text-object':''}${obj.kind==='image'?' image-object':''}${obj.locked?' locked-object':''}${obj.id===this.state.selection?' selected':''}`;
+    el.className=`scene-object${obj.kind==='graph'?' graph-object':''}${obj.kind==='text'?' text-object':''}${obj.kind==='image'?' image-object':''}${obj.locked?' locked-object':''}`;
     el.dataset.id=obj.id; Object.assign(el.style,{left:`${obj.x}px`,top:`${obj.y}px`,width:`${obj.w}px`,height:`${obj.h}px`,color:obj.color||'#245d55',transform:`rotate(${obj.rotation||0}deg)`});
     if(obj.locked) el.style.pointerEvents='none';
     el.innerHTML=obj.kind==='shape'?shapeSvg(obj):obj.kind==='graph'?graphSvg(obj):obj.kind==='text'?textMarkup(obj):obj.kind==='image'?imageMarkup(obj):'';
-    if(obj.id===this.state.selection&&!obj.locked){
-      const edit=['text','graph'].includes(obj.kind)?'<button class="object-edit" type="button" title="Редагувати">✎</button>':'';
-      el.insertAdjacentHTML('beforeend',`${edit}<span class="object-handle resize-handle" data-handle="resize" title="Змінити розмір"></span><span class="object-handle rotate-handle" data-handle="rotate" title="Повернути">↻</span><button class="object-delete" type="button" title="Видалити">×</button>`);
-    }
     if(!obj.locked){
       el.addEventListener('pointerdown',e=>this.pointerDownObject(e,obj));
       el.addEventListener('dblclick',e=>{if(!['text','graph'].includes(obj.kind))return;e.preventDefault();e.stopPropagation();this.requestEdit(obj);});
     }
-    el.querySelector('.object-edit')?.addEventListener('pointerdown',e=>e.stopPropagation());
-    el.querySelector('.object-edit')?.addEventListener('click',e=>{e.stopPropagation();this.requestEdit(obj);});
-    el.querySelector('.object-delete')?.addEventListener('pointerdown',e=>e.stopPropagation());
-    el.querySelector('.object-delete')?.addEventListener('click',e=>{e.stopPropagation();this.deleteSelected();});
     return el;
   }
-  updateElementGeometry(obj){
-    const el=[...this.layer.children].find(node=>node.dataset?.id===obj.id);
+  updateElementGeometry(obj,el=this.findElement(obj.id)){
     if(!el){this.renderKeys.delete(obj.id);this.render();return;}
-    Object.assign(el.style,{left:`${obj.x}px`,top:`${obj.y}px`,width:`${obj.w}px`,height:`${obj.h}px`,transform:`rotate(${obj.rotation||0}deg)`});
+    Object.assign(el.style,{left:`${obj.x}px`,top:`${obj.y}px`,width:`${obj.w}px`,height:`${obj.h}px`,color:obj.color||'#245d55',transform:`rotate(${obj.rotation||0}deg)`});
     if(obj.kind==='text'){
       const content=el.querySelector('.text-object-content');
       if(content)content.style.fontSize=`${obj.fontSize||32}px`;
