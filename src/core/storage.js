@@ -91,9 +91,10 @@ function normalizeObject(obj) {
     copy.color = typeof copy.color === 'string' ? copy.color : '#245d55';
     copy.fontSize = clamp(copy.fontSize,12,160,32);
   } else if (copy.kind === 'image') {
-    if (typeof copy.src !== 'string' || !isSafeImageDataUrl(copy.src) || copy.src.length>MAX_IMAGE_DATA_URL_LENGTH) return null;
-    copy.locked = Boolean(copy.locked || copy.legacyRaster);
-    copy.legacyRaster = Boolean(copy.legacyRaster);
+    const legacyRaster=Boolean(copy.legacyRaster);
+    if (typeof copy.src !== 'string' || !isSafeImageDataUrl(copy.src) || (!legacyRaster&&copy.src.length>MAX_IMAGE_DATA_URL_LENGTH)) return null;
+    copy.locked = Boolean(copy.locked || legacyRaster);
+    copy.legacyRaster = legacyRaster;
   }
   return copy;
 }
@@ -173,7 +174,7 @@ function migrateLegacyPage(page, index) {
     page.objects.slice(0,MAX_OBJECTS_PER_PAGE).map(normalizeObject).filter(Boolean).forEach(o => objects.push(o));
   }
 
-  if (typeof page?.image === 'string' && isSafeImageDataUrl(page.image) && page.image.length<=MAX_IMAGE_DATA_URL_LENGTH) {
+  if (typeof page?.image === 'string' && isSafeImageDataUrl(page.image)) {
     objects.unshift({
       id: id('legacyRaster'), kind: 'image', src: page.image,
       name: 'Імпорт зі старої дошки', x: 0, y: 0, w: 1600, h: 900,
