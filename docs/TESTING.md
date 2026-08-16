@@ -12,37 +12,35 @@ Validate перевіряє:
 - синтаксис JavaScript, import-шляхи, критичні модулі та DOM-контракт `preview.html`;
 - safe mathematical parser без `Function/eval`, natural notation та performance-ліміти графіка;
 - graph/text SVG/HTML safety;
-- спільні content limits: text 20 000 символів, graph expression 300 символів;
-- structural caps: 100 pages, 5 000 strokes/page, 12 000 points/stroke, 800 objects/page, 40 geometry instruments/page;
-- safe raster image policy: PNG/JPEG/WebP/GIF/AVIF; SVG та remote image sources не проходять;
-- transactional image rollback: при невдалому autosave прибираються image object і вся побічна зміна Undo/Redo history;
 - прозору гумку й marker opacity;
 - zoom 50–200% із кроком 25%, client→scene/drag delta та один простір 1600×900;
 - resize повернутих object/instrument елементів у локальних осях;
-- aspect ratio image object, коло/circleArc 1:1 та resize line/arrow тільки по довжині;
+- aspect ratio image object, коло 1:1 та resize line/arrow тільки по довжині;
 - bounds-check для надмірних координат/розмірів у storage і runtime resize;
 - геометрію транспортира/циркуля після rotation;
-- clear → undo → redo, ізоляцію history між сторінками та адаптивний history budget;
+- clear → undo → redo, ізоляцію history між сторінками та ліміт 50 snapshot;
 - відсутність порожніх Undo-кроків при no-op tap/select/background/update;
 - multi-touch pointerId-контракт для drawing, shapes, objects та geometry tools;
 - shape gesture threshold 8 px і directed line/arrow creation;
 - text/graph editing через properties panel;
 - page rename/destructive actions через власні dialogs та non-blocking notices;
 - memory-safe обробку великих зображень через Blob URL;
+- safe raster image policy PNG/JPEG/WebP/GIF/AVIF і transactional image rollback;
+- content/structural caps до важкої нормалізації та runtime capacity guards;
 - відновлення пошкодженого `teacherboard.v2` до безпечного runtime state;
-- `saveState()` при QuotaExceededError;
+- `saveState()` при QuotaExceededError та dedupe повторного незміненого autosave;
 - legacy `number5`, `number10`, `numberBlank` → `numberLine`;
-- oversized legacy raster не відкидається новим image cap до transactional migration;
-- PNG composition contract, включно з центральними осями координатного фону;
+- PNG composition contract;
 - keyboard focus safety;
 - laser exclusivity;
+- `100dvh` для видимої висоти mobile shell/pagebar;
 - правило, що в режимах малювання objects/instruments не перехоплюють pointer events.
 
 ### Ручний Browser Smoke
 
 `Browser Smoke TeacherBoard Next` також має тільки ручний запуск. Попередні успішні Chromium-прогони вже підтвердили migration/rollback, desktop/tablet/Android viewport, shape objects, curtain, text, graph scale, responsive drawer, geometry builds, autosave, pages, transparent eraser та реальне PNG download.
 
-Після останніх touch/shape/storage/image змін потрібен **один фінальний ручний прогін** обох workflow перед merge.
+Після останніх touch/shape/bounds/content/image змін потрібен **один фінальний ручний прогін** обох workflow перед merge. Browser Smoke уже синхронізований із custom dialogs, 25% zoom, startup `Вибір`, directed line/circle/shape threshold і graph update з custom ranges/step 0.5.
 
 ## 1. Запуск і збереження
 
@@ -51,15 +49,15 @@ Validate перевіряє:
 - [x] Storage нормалізує нестандартний zoom при loadState.
 - [x] Пошкоджений v2-state санітизується.
 - [x] Надмірні object/instrument coordinates та dimensions обмежуються safe bounds.
-- [x] Масиви обрізаються **до** normalize/map: pages 100, strokes 5 000, points 12 000, objects 800, instruments 40.
 - [x] QuotaExceededError не кидається назовні із `saveState()`.
+- [x] Повторний незмінений state не створює другого `localStorage.setItem()`.
 - [x] Великі image files використовують Blob URL path і max source dimension 1600 px.
-- [x] Новий image DataURL понад 5 000 000 символів не потрапляє в runtime після reload.
-- [x] Oversized `legacyRaster` не відкидається до transactional migration; при невдалому v2 write стара v1 відновлюється.
-- [x] Add/duplicate page не може перевищити 100 сторінок; UI показує notice.
+- [x] Image insertion rollback відновлює object state та Undo/Redo history.
+- [x] Нові image object приймають тільки PNG/JPEG/WebP/GIF/AVIF; SVG/remote sources відхиляються.
 - [ ] Фізично вставити велике фото з телефона й reload сторінку.
 - [ ] Перемикання сторінок не змішує їхній вміст.
 - [x] Повторний tap по вже активній сторінці не скидає Undo history.
+- [x] Mobile shell використовує `100dvh`, щоб pagebar залишалась у видимій області Android viewport.
 - [ ] Повторно перевірити Android pagebar після останніх змін.
 
 ## 2. Малювання
@@ -68,8 +66,7 @@ Validate перевіряє:
 - [x] Marker використовує `globalAlpha = 0.24`.
 - [x] Eraser використовує `destination-out`.
 - [x] Freehand зберігає один active `pointerId`; другий палець не перехоплює stroke.
-- [x] Freehand не зберігає сусідні точки ближчі за 0,5 logical px.
-- [x] Runtime cap: 5 000 strokes/page і 12 000 points/stroke; при cap strokes показується notice.
+- [x] Freehand відсікає майже однакові точки ближче 0,5 logical px і має runtime caps.
 - [x] Objects та geometry tools не перехоплюють pointer events, коли активна ручка/маркер/гумка/shape tool.
 - [ ] Фізично перевірити ручку на 75%, 100%, 125%, 150%.
 - [ ] Намалювати поверх існуючої фігури та біля видимої лінійки.
@@ -88,14 +85,13 @@ Validate перевіряє:
 - [x] Preview line/arrow показує напрямлений відрізок; arrow preview має вістря.
 - [x] «Коло» й «Еліпс» — окремі інструменти.
 - [x] Коло створюється й resize-иться тільки 1:1; persisted circle також нормалізується до square bounds.
-- [x] `circleArc`, побудований циркулем, також залишається 1:1 після resize/reload.
+- [x] `circleArc` циркуля також зберігає square bounds після resize/reload.
 - [x] Line/arrow resize змінює довжину по локальній осі й не розтягує висоту.
 - [x] Image resize зберігає aspect ratio після rotation.
 - [x] Object manipulation зберігає один active pointerId.
 - [x] Простий tap/select без руху не створює Undo snapshot.
 - [x] Повторний updateSelected без фактичної зміни не створює Undo snapshot.
 - [x] Шторка є окремим редагованим object.
-- [x] Runtime cap 800 objects/page; multi-object geometry construction або створюється повністю, або не створюється взагалі.
 - [x] Legacy number lines мігрують у новий `numberLine`.
 - [ ] Фізично перевірити circle/ellipse, line/arrow, triangle/rect та curtain.
 - [ ] Фізично перевірити move/resize/rotate/delete пальцем.
@@ -107,18 +103,13 @@ Validate перевіряє:
 
 - [x] Text/graph мають touch-friendly кнопку ✎ і panel editing.
 - [x] Text markup escape-ить HTML та санітизує inline color.
-- [x] Text input/object/storage мають спільний max 20 000 символів.
+- [x] Text object обмежений 20 000 символів, graph expression — 300 символів на UI/object/parser/storage рівнях.
 - [x] Математичні символи вставляються через `setRangeText` у позицію курсора.
 - [x] Global Ctrl/Cmd+Z/Delete/Backspace не перехоплюються під час введення у form fields.
 - [x] Clipboard підтримує `files` і `items/getAsFile()`.
-- [x] File picker та runtime приймають тільки PNG/JPEG/WebP/GIF/AVIF; SVG відхиляється.
-- [x] Storage повторно перевіряє image DataURL і не приймає remote URL/SVG.
-- [x] Якщо image insertion не поміщається в localStorage, object автоматично відкочується.
-- [x] Невдала image insertion відновлює Undo і Redo stacks до стану перед спробою.
-- [x] Для unsupported image format і storage rollback є окремі non-blocking notices.
 - [ ] Вставити image з file picker на фізичному пристрої.
 - [ ] Вставити screenshot через paste.
-- [ ] Спробувати SVG: має бути чітке повідомлення без створення object.
+- [ ] Спробувати SVG і переконатися, що з'являється зрозуміле повідомлення без вставки.
 - [ ] Resize/rotate image і reload без втрати пропорцій.
 - [ ] Перевірити символи √ π ± ≤ ≥ ∠ ° ² ³ ∑ ∫ у середині тексту.
 
@@ -127,12 +118,11 @@ Validate перевіряє:
 - [x] Parser підтримує `x^2`, `-x^2`, `2^-2`, `2x-3`, `3(x+1)`, `πx`, `sin`, `sqrt`, `abs`, decimal comma, `×`, `÷`.
 - [x] Parser не використовує `new Function` або `eval`.
 - [x] Сторонні JS identifiers відхиляються.
-- [x] Graph expression має max 300 символів у UI, object manager, parser і storage.
-- [x] Надмірна formula відхиляється до tokenization.
 - [x] Graph SVG escape-ить title/ARIA та санітизує curve color.
 - [x] Grid/sample performance guards обмежують DOM-навантаження.
 - [x] Числові labels і назви x/y присутні.
-- [ ] UI ranges x/y змінюють масштаб графіка.
+- [x] Browser Smoke підготовлений до перевірки `2x-3`, ranges −5…5/−8…8 і step 0.5.
+- [ ] UI ranges x/y змінюють масштаб графіка у фінальному ручному прогоні.
 - [ ] Крок 0.5, 1, 2 візуально коректний.
 - [ ] ✎ відкриває поточну expression/ranges і Update працює.
 - [ ] Graph move/resize/rotate працює пальцем.
@@ -149,7 +139,6 @@ Validate перевіряє:
 - [x] Повторний click на вже активний compass mode не створює Undo snapshot.
 - [x] Geometry tools не можна повністю втягнути за межі сцени: щонайменше 40 px лишаються доступними.
 - [x] Runtime resize обмежений до 1600×900; ruler height — до 240 px.
-- [x] Runtime/storage cap: 40 geometry instruments/page; toolbar показує notice при досягненні межі.
 - [ ] Ruler move/rotate/resize пальцем; «Провести» збігається з робочим краєм.
 - [ ] Protractor move/rotate та angle handle фізично.
 - [ ] Compass move/rotate/radius; circle/arc збігаються з needle/pencil.
@@ -160,7 +149,7 @@ Validate перевіряє:
 - [x] Laser — temporary overlay і не записує object/stroke.
 - [x] Laser не використовує pointer capture.
 - [x] Вибір ручки, shape, text, image або geometry tool автоматично вимикає laser.
-- [x] Toolbar не лишає одночасно активними Laser і основний tool.
+- [x] Toolbar visual active-state синхронізований з internal laser state.
 - [ ] Фізично перевірити pointer movement і завершення жесту поза дошкою.
 - [ ] Перемкнути Laser → Pen і Laser → Ruler: новий tool має одразу працювати.
 
@@ -170,7 +159,7 @@ Validate перевіряє:
 - [x] Presets: 50%, 75%, 100%, 125%, 150%, 175%, 200%.
 - [x] client→scene та drag delta перевіряються на presets.
 - [x] Rotated resize працює в local axes.
-- [x] Фон `coords` знову має центральні осі, як legacy board.
+- [x] Координатний фон має minor/major grid і central axes; PNG відтворює ті самі осі.
 - [ ] Візуально перевірити, що background/canvas/objects/instruments не роз'їжджаються.
 - [ ] Перетягування на 75%, 100%, 125%, 150%.
 - [ ] Graph/axes labels залишаються читабельними після resize.
@@ -178,13 +167,13 @@ Validate перевіряє:
 ## 9. PNG
 
 - [x] Export contract: 1600×900, background → drawing → objects → instruments.
-- [x] Координатний фон у PNG містить central axes x=800 і y=450.
 - [x] Exporter не збирає service handles/buttons.
+- [x] Координатний background у PNG містить central axes x=800/y=450.
 - [x] Попередній Browser Smoke підтвердив real Chromium download.
 - [ ] Складна сторінка: grid/coords + handwriting + shapes + text + image + graph + geometry tools.
 - [ ] PNG містить усі потрібні шари.
 - [ ] PNG не містить selection outline, resize/rotate/edit/delete controls.
-- [ ] Візуально звірити rotation text/image/graph/instruments.
+- [ ] Візуально звірити rotation text/image/graph/instruments і переноси довгого тексту.
 
 ## 10. Legacy migration
 
@@ -193,7 +182,7 @@ Validate перевіряє:
 - [x] Legacy texts → text objects із координатами/кольором.
 - [x] Migration не дублюється після reload.
 - [x] Transactional rollback відновлює v1 при невдалому записі v2.
-- [x] Великий safe raster із legacy board не відкидається новим 5 МБ cap до спроби v2 migration.
+- [x] Великий safe legacy raster не відкидається image cap до спроби migration; при quota лишається v1.
 - [x] Legacy number line aliases підтримуються у v1 та старому v2.
 - [ ] Перевірити одну реальну велику стару дошку перед merge.
 
@@ -211,11 +200,10 @@ Validate перевіряє:
 
 ### Android phone
 - [ ] Drawer + visualViewport + keyboard.
-- [ ] Pagebar: add → duplicate → rename → delete.
+- [ ] Pagebar: add → duplicate → rename → delete; перевірити `100dvh` при видимих browser bars.
 - [ ] Pen/eraser поверх object layer.
 - [ ] Shape threshold і line/arrow direction.
 - [ ] Multi-touch pointerId protection.
-- [ ] Велике фото з телефона та unsupported SVG notice.
 - [ ] Laser.
 
 ## 12. Перед merge
