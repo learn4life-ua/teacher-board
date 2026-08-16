@@ -1,4 +1,5 @@
 import { normalizeZoom } from './scene.js';
+import { MAX_TEXT_LENGTH, MAX_GRAPH_EXPRESSION_LENGTH, limitText } from './content-limits.js';
 
 const STORAGE_KEY = 'teacherboard.v2';
 const LEGACY_KEY = 'teacherboard.v1';
@@ -73,7 +74,7 @@ function normalizeObject(obj) {
     copy.color = typeof copy.color === 'string' ? copy.color : '#245d55';
     copy.lineWidth = clamp(copy.lineWidth,1,40,4);
   } else if (copy.kind === 'graph') {
-    copy.expression = typeof copy.expression === 'string' && copy.expression.trim() ? copy.expression : 'x';
+    copy.expression = limitText(typeof copy.expression === 'string' && copy.expression.trim() ? copy.expression : 'x',MAX_GRAPH_EXPRESSION_LENGTH,'x').trim()||'x';
     copy.color = typeof copy.color === 'string' ? copy.color : '#245d55';
     copy.xMin = finite(copy.xMin,-10); copy.xMax = finite(copy.xMax,10);
     copy.yMin = finite(copy.yMin,-10); copy.yMax = finite(copy.yMax,10);
@@ -81,7 +82,7 @@ function normalizeObject(obj) {
     if (!(copy.yMin < copy.yMax)) { copy.yMin=-10; copy.yMax=10; }
     copy.majorStep = Math.max(.1,finite(copy.majorStep,1));
   } else if (copy.kind === 'text') {
-    copy.text = String(copy.text ?? 'Текст');
+    copy.text = limitText(copy.text,MAX_TEXT_LENGTH,'Текст');
     copy.color = typeof copy.color === 'string' ? copy.color : '#245d55';
     copy.fontSize = clamp(copy.fontSize,12,160,32);
   } else if (copy.kind === 'image') {
@@ -179,7 +180,7 @@ function migrateLegacyPage(page, index) {
     page.texts.forEach(t => {
       if (!t || !String(t.text ?? '').trim()) return;
       objects.push({
-        id: id('text'), kind: 'text', text: String(t.text),
+        id: id('text'), kind: 'text', text: limitText(t.text,MAX_TEXT_LENGTH,''),
         x: finite(t.x,220), y: finite(t.y,150),
         w: 420, h: 100, rotation: 0,
         color: t.color || '#245d55', fontSize: 32
