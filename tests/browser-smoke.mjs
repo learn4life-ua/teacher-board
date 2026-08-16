@@ -32,6 +32,28 @@ async function drawShape(page,shape,from,to){
   await page.waitForTimeout(80);
 }
 
+async function runStartupToolRecoveryCase(){
+  console.log('[startup-tool] start');
+  const browser=await chromium.launch({headless:true});
+  try{
+    const context=await browser.newContext({viewport:{width:1100,height:800}});
+    const page=await context.newPage();page.setDefaultTimeout(8000);
+    await page.addInitScript(()=>{
+      localStorage.removeItem('teacherboard.v1');
+      localStorage.removeItem('teacherboard.v2.migratedFromV1');
+      localStorage.setItem('teacherboard.v2',JSON.stringify({
+        tool:'pen',color:'#245d55',lineWidth:4,zoom:1,activePage:0,
+        pages:[{id:'startup-p',name:'Startup',background:'clean',strokes:[],objects:[],instruments:[]}]
+      }));
+    });
+    await page.goto(baseURL,{waitUntil:'networkidle'});await page.waitForSelector('#scene');
+    assert.equal(await page.locator('.tool.active[data-tool="select"]').count(),1,'startup: persisted pen must recover to Select');
+    assert.equal(await page.locator('#scene').getAttribute('data-tool'),'select','startup: scene tool must be select after reload');
+    assert.equal(await page.locator('#shapeMenu').isHidden(),true,'startup: shape menu must stay closed');
+    console.log('[startup-tool] persisted drawing tool → select ok');
+  }finally{await browser.close();}
+}
+
 async function runLegacyMigrationCase(){
   console.log('[migration] start');
   const browser=await chromium.launch({headless:true});
@@ -112,7 +134,24 @@ async function desktopExtras(page){
   assert.equal(await page.locator('.scene-object').count(),beforeCurtain+1,'desktop: curtain object was not created');
   await page.click('#undoBtn');assert.equal(await page.locator('.scene-object').count(),beforeCurtain,'desktop: undo did not remove curtain');
   await page.click('#redoBtn');assert.equal(await page.locator('.scene-object').count(),beforeCurtain+1,'desktop: redo did not restore curtain');
-  console.log('[desktop] curtain+undo/redo ok');
+
+  const beforeLine=await page.locator('.scene-object').count();await drawShape(page,'line',{x:300,y:110},{x:470,y:110});
+  assert.equal(await page.locator('.scene-object').count(),beforeLine+1,'desktop: line object was not created');
+  const line=await page.evaluate(()=>{const s=JSON.parse(localStorage.getItem('teacherboard.v2'));return s.pages[s.activePage].objects.at(-1);});
+  assert.equal(line.shape,'segment','desktop: line gesture must persist as directed segment');
+  assert.ok(line.w>150&&Math.abs(line.rotation)<1,`desktop: horizontal line direction was not preserved: w=${line.w}, rotation=${line.rotation}`);
+
+  const beforeCircle=await page.locator('.scene-object').count();await drawShape(page,'circle',{x:520,y:120},{x:660,y:210});
+  assert.equal(await page.locator('.scene-object').count(),beforeCircle+1,'desktop: circle object was not created');
+  const circle=await page.evaluate(()=>{const s=JSON.parse(localStorage.getItem('teacherboard.v2'));return s.pages[s.activePage].objects.at(-1);});
+  assert.equal(circle.shape,'circle');assert.equal(circle.w,circle.h,'desktop: circle gesture must create 1:1 bounds');
+
+  await page.click('#shapeBtn');await page.locator('#shapeMenu [data-shape="rect"]').click();
+  const sceneBox=await page.locator('#scene').boundingBox();assert.ok(sceneBox);
+  const beforeTap=await page.locator('.scene-object').count();await page.mouse.move(sceneBox.x+720,sceneBox.y+150);await page.mouse.down();await page.mouse.up();await page.waitForTimeout(60);
+  assert.equal(await page.locator('.scene-object').count(),beforeTap,'desktop: short shape tap created a junk object');
+  await page.click('.tool[data-tool="select"]');
+  console.log('[desktop] curtain/directed line/circle/shape threshold ok');
 }
 
 async function geometryExtras(page){
@@ -128,37 +167,59 @@ async function geometryExtras(page){
 async function clearUndoExtras(page){
   const before={objects:await page.locator('.scene-object').count(),instruments:await page.locator('.geometry-tool').count(),state:await page.evaluate(()=>{const s=JSON.parse(localStorage.getItem('teacherboard.v2'));return s.pages[s.activePage];})};
   assert.ok(before.objects>0&&before.instruments>0&&before.state.strokes.length>0,'desktop: clear test needs strokes, objects and instruments');
-  page.once('dialog',dialog=>dialog.accept());await page.click('#clearPageBtn');
+  await page.click('#clearPageBtn');
+  assert.equal(await page.locator('#confirmActionDialog').getAttribute('open')!==null,true,'desktop: clear custom confirm dialog did not open');
+  await page.locator('#confirmActionDialog [data-dialog-confirm]').click();
   assert.equal(await page.locator('.scene-object').count(),0,'desktop: clear did not remove objects');assert.equal(await page.locator('.geometry-tool').count(),0,'desktop: clear did not remove instruments');
-  let cleared=await page.evaluate(()=>{const s=JSON.parse(localStorage.getItem('teacherboard.v2'));return s.pages[s.activePage];});
+  const cleared=await page.evaluate(()=>{const s=JSON.parse(localStorage.getItem('teacherboard.v2'));return s.pages[s.activePage];});
   assert.equal(cleared.objects.length,0);assert.equal(cleared.instruments.length,0);assert.equal(cleared.strokes.length,0);
   await page.click('#undoBtn');
   assert.equal(await page.locator('.scene-object').count(),before.objects,'desktop: undo after clear did not restore objects');assert.equal(await page.locator('.geometry-tool').count(),before.instruments,'desktop: undo after clear did not restore instruments');
   const restored=await page.evaluate(()=>{const s=JSON.parse(localStorage.getItem('teacherboard.v2'));return s.pages[s.activePage];});
   assert.equal(restored.strokes.length,before.state.strokes.length,'desktop: undo after clear did not restore strokes');
-  console.log('[desktop] clear+undo ok');
+  console.log('[desktop] custom clear dialog+undo ok');
 }
 
 async function zoomExtras(page){
   const object=page.locator('.scene-object').first(),ruler=page.locator('.geometry-ruler').first();
   const objectBefore=await object.boundingBox(),rulerBefore=await ruler.boundingBox(),leftBefore=await object.evaluate(el=>el.style.left);assert.ok(objectBefore&&rulerBefore,'desktop: zoom targets missing');
   await page.click('#zoomInBtn');await page.click('#zoomInBtn');
-  assert.equal((await page.locator('#zoomLabel').innerText()).trim(),'120%','desktop: zoom label did not reach 120%');
+  assert.equal((await page.locator('#zoomLabel').innerText()).trim(),'150%','desktop: two zoom-in clicks must reach 150%');
   const objectAfter=await object.boundingBox(),rulerAfter=await ruler.boundingBox();assert.ok(objectAfter&&rulerAfter);
   const objectRatio=objectAfter.width/objectBefore.width,rulerRatio=rulerAfter.width/rulerBefore.width;
-  assert.ok(objectRatio>1.17&&objectRatio<1.23,`desktop: object zoom ratio ${objectRatio} is not ~1.2`);assert.ok(rulerRatio>1.17&&rulerRatio<1.23,`desktop: ruler zoom ratio ${rulerRatio} is not ~1.2`);
+  assert.ok(objectRatio>1.47&&objectRatio<1.53,`desktop: object zoom ratio ${objectRatio} is not ~1.5`);assert.ok(rulerRatio>1.47&&rulerRatio<1.53,`desktop: ruler zoom ratio ${rulerRatio} is not ~1.5`);
   assert.equal(await object.evaluate(el=>el.style.left),leftBefore,'desktop: zoom changed logical object coordinates');
   await page.click('#zoomOutBtn');await page.click('#zoomOutBtn');assert.equal((await page.locator('#zoomLabel').innerText()).trim(),'100%');
-  console.log('[desktop] unified scene zoom ok');
+  console.log('[desktop] unified 25% scene zoom ok');
+}
+
+async function updateGraphExtras(page,name){
+  await page.fill('#graphExpression','2x-3');
+  await page.fill('#graphXMin','-5');await page.fill('#graphXMax','5');
+  await page.fill('#graphYMin','-8');await page.fill('#graphYMax','8');
+  await page.fill('#graphStep','0.5');await page.click('#updateGraphBtn');
+  assert.match(await page.locator('.graph-object .graph-title').last().innerText(),/2x-3/,`${name}: graph title did not update`);
+  assert.ok(await page.locator('.graph-object .graph-label').last().count()>=1,`${name}: graph labels disappeared after update`);
+  const graph=await page.evaluate(()=>{const s=JSON.parse(localStorage.getItem('teacherboard.v2'));return s.pages[s.activePage].objects.filter(o=>o.kind==='graph').at(-1);});
+  assert.equal(graph.expression,'2x-3',`${name}: graph expression was not persisted`);
+  assert.equal(graph.xMin,-5);assert.equal(graph.xMax,5);assert.equal(graph.yMin,-8);assert.equal(graph.yMax,8);assert.equal(graph.majorStep,0.5);
+  assert.ok(await page.locator('.graph-object .graph-axis-name').count()>=2,`${name}: graph axis names disappeared after update`);
+  console.log(`[${name}] graph update/ranges/step 0.5 ok`);
 }
 
 async function pageActions(page,name,beforePages){
   await page.click('#addPageBtn');assert.equal(await page.locator('.page-tab').count(),beforePages+1,`${name}: page was not added`);
   await page.click('#duplicatePageBtn');assert.equal(await page.locator('.page-tab').count(),beforePages+2,`${name}: page was not duplicated`);
-  page.once('dialog',dialog=>dialog.accept('Урок — тест'));await page.click('#renamePageBtn');assert.match(await page.locator('.page-tab.active').innerText(),/Урок — тест/,`${name}: active page was not renamed`);
-  page.once('dialog',dialog=>dialog.accept());await page.click('#deletePageBtn');assert.equal(await page.locator('.page-tab').count(),beforePages+1,`${name}: page was not deleted`);
+
+  await page.click('#renamePageBtn');assert.equal(await page.locator('#renamePageDialog').getAttribute('open')!==null,true,`${name}: rename dialog did not open`);
+  await page.fill('#renamePageInput','Урок — тест');await page.click('#renamePageSaveBtn');
+  assert.match(await page.locator('.page-tab.active').innerText(),/Урок — тест/,`${name}: active page was not renamed`);
+
+  await page.click('#deletePageBtn');assert.equal(await page.locator('#confirmActionDialog').getAttribute('open')!==null,true,`${name}: delete dialog did not open`);
+  await page.locator('#confirmActionDialog [data-dialog-confirm]').click();
+  assert.equal(await page.locator('.page-tab').count(),beforePages+1,`${name}: page was not deleted`);
   assert.equal((await page.locator('.page-tab.active').innerText()).includes('Урок — тест'),false,`${name}: deleted page is still active`);
-  console.log(`[${name}] page add/duplicate/rename/delete ok`);
+  console.log(`[${name}] page add/duplicate/custom rename/delete ok`);
 }
 
 async function runCase(name,contextOptions={}){
@@ -173,6 +234,7 @@ async function runCase(name,contextOptions={}){
     if(narrow){await page.click('#mobilePanelBtn');assert.equal(await page.locator('#sidePanel').evaluate(()=>document.body.classList.contains('side-panel-open')),true,`${name}: mobile panel did not open`);await page.waitForTimeout(180);}
     await page.fill('#textValue','x² + y² = 25');await page.click('#addTextBtn');assert.ok(await page.locator('.text-object').count()>=1,`${name}: text object was not created`);
     await page.fill('#graphExpression','x^2');await page.click('#addGraphBtn');assert.ok(await page.locator('.graph-object').count()>=1,`${name}: graph object was not created`);assert.ok(await page.locator('.graph-object .graph-label').count()>=8,`${name}: graph numeric scale missing`);assert.equal(await page.locator('.graph-object .graph-axis-name').count(),2,`${name}: graph axis names missing`);console.log(`[${name}] text+graph scale ok`);
+    await updateGraphExtras(page,name);
     if(narrow)await page.click('#closeSidePanelBtn');await page.locator('.instrument-btn[data-instrument="ruler"]').click();assert.ok(await page.locator('.geometry-ruler').count()>=1,`${name}: ruler was not created`);console.log(`[${name}] ruler ok`);
     if(name==='desktop'){
       await geometryExtras(page);
@@ -185,4 +247,11 @@ async function runCase(name,contextOptions={}){
   }finally{await browser.close();}
 }
 
-await runLegacyMigrationCase();await runLegacyRollbackCase();await runCase('desktop',{viewport:{width:1440,height:1000}});await runCase('tablet',{viewport:{width:820,height:1180},hasTouch:true});await runCase('android',{...devices['Pixel 7']});clearTimeout(watchdog);console.log('TeacherBoard browser smoke: OK');
+await runStartupToolRecoveryCase();
+await runLegacyMigrationCase();
+await runLegacyRollbackCase();
+await runCase('desktop',{viewport:{width:1440,height:1000}});
+await runCase('tablet',{viewport:{width:820,height:1180},hasTouch:true});
+await runCase('android',{...devices['Pixel 7']});
+clearTimeout(watchdog);
+console.log('TeacherBoard browser smoke: OK');
