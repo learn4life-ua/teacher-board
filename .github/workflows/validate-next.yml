@@ -60,6 +60,9 @@ jobs:
       - name: Check safe image format policy
         run: node tests/image-policy-check.mjs
 
+      - name: Check final release regression contract
+        run: node tests/release-contract-check.mjs
+
       - name: Check object edit panel contract
         shell: bash
         run: |
