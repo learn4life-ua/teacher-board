@@ -1,6 +1,7 @@
 import { activePage, uid } from '../core/state.js';
 import { pushHistory } from '../core/history.js';
 import { sceneDeltaFromClient, sceneDeltaToLocalAxes } from '../core/scene.js';
+import { MAX_INSTRUMENTS_PER_PAGE } from '../core/content-limits.js';
 
 const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
 const MAX_INSTRUMENT_W=1600;
@@ -31,7 +32,7 @@ export function compassRightPercent(item){
 export class GeometryTools{
   constructor({state,layer,objectManager,onChange}){this.state=state;this.layer=layer;this.objectManager=objectManager;this.onChange=onChange;this.drag=null;window.addEventListener('pointermove',e=>this.pointerMove(e));window.addEventListener('pointerup',e=>this.pointerUp(e));window.addEventListener('pointercancel',e=>this.pointerUp(e));window.addEventListener('blur',()=>this.pointerUp());}
   get items(){return activePage(this.state).instruments;}
-  add(type){pushHistory(this.state);const base={id:uid(type),type,x:520,y:290,rotation:0};const item=type==='ruler'?{...base,w:520,h:96}:type==='protractor'?{...base,w:420,h:220,angle:60}:{...base,w:260,h:300,radius:92,mode:'circle',arcStart:0,arcEnd:180};this.items.push(item);this.render();this.onChange?.();}
+  add(type){if(this.items.length>=MAX_INSTRUMENTS_PER_PAGE)return false;pushHistory(this.state);const base={id:uid(type),type,x:520,y:290,rotation:0};const item=type==='ruler'?{...base,w:520,h:96}:type==='protractor'?{...base,w:420,h:220,angle:60}:{...base,w:260,h:300,radius:92,mode:'circle',arcStart:0,arcEnd:180};this.items.push(item);this.render();this.onChange?.();return item;}
   render(){this.layer.innerHTML='';for(const item of this.items)this.layer.appendChild(this.element(item));}
   remove(id){const i=this.items.findIndex(x=>x.id===id);if(i<0)return;pushHistory(this.state);this.items.splice(i,1);this.render();this.onChange?.();}
   element(item){const el=document.createElement('div');el.className=`geometry-tool geometry-${item.type}`;el.dataset.id=item.id;Object.assign(el.style,{left:`${item.x}px`,top:`${item.y}px`,width:`${item.w}px`,height:`${item.h}px`,transform:`rotate(${item.rotation||0}deg)`});el.innerHTML=`${this.svg(item)}${this.actionMarkup(item)}<button class="geometry-close" type="button" title="Закрити">×</button><span class="geometry-rotate" data-handle="rotate" title="Повернути">↻</span><span class="geometry-resize" data-handle="resize" title="Змінити розмір"></span>${item.type==='protractor'?this.angleHandleMarkup(item):''}${item.type==='compass'?this.compassControls(item):''}`;
