@@ -1,0 +1,150 @@
+.app-shell{
+  height:100dvh;
+}
+
+.scene-object:not(.locked-object),
+.scene-object:not(.locked-object) .object-handle,
+.scene-object:not(.locked-object) .object-edit,
+.scene-object:not(.locked-object) .object-delete,
+.geometry-tool,
+.geometry-tool button,
+.geometry-tool [data-handle]{
+  touch-action:none;
+  -webkit-user-select:none;
+  user-select:none;
+}
+
+.scene-object:not(.locked-object),
+.geometry-tool{
+  -webkit-tap-highlight-color:transparent;
+}
+
+/* Keep the coordinate-plane background consistent with the legacy board:
+   minor grid + major grid + central x/y axes. */
+.scene[data-background="coords"]{
+  background-color:#fff;
+  background-image:
+    linear-gradient(90deg,transparent calc(50% - 1px),#76998e calc(50% - 1px),#76998e calc(50% + 1px),transparent calc(50% + 1px)),
+    linear-gradient(transparent calc(50% - 1px),#76998e calc(50% - 1px),#76998e calc(50% + 1px),transparent calc(50% + 1px)),
+    linear-gradient(#e7efec 1px,transparent 1px),
+    linear-gradient(90deg,#e7efec 1px,transparent 1px),
+    linear-gradient(#aac5bc 1px,transparent 1px),
+    linear-gradient(90deg,#aac5bc 1px,transparent 1px);
+  background-size:100% 100%,100% 100%,20px 20px,20px 20px,100px 100px,100px 100px;
+}
+
+.scene:not([data-tool="select"]) .scene-object,
+.scene:not([data-tool="select"]) .geometry-tool{
+  pointer-events:none!important;
+}
+
+.shape-preview.directed{
+  height:0!important;
+  border:0!important;
+  border-top:2px dashed #2f7c69!important;
+  background:none!important;
+  transform-origin:0 0;
+}
+.shape-preview.directed.arrow-preview::after{
+  content:"";
+  position:absolute;
+  right:-1px;
+  top:-6px;
+  width:10px;
+  height:10px;
+  border-top:2px solid #2f7c69;
+  border-right:2px solid #2f7c69;
+  transform:rotate(45deg);
+}
+
+.object-edit{
+  position:absolute;
+  left:-15px;
+  top:-16px;
+  width:28px;
+  height:28px;
+  border:0;
+  border-radius:50%;
+  background:#2f7c69;
+  color:#fff;
+  font-size:16px;
+  line-height:26px;
+  padding:0;
+  box-shadow:0 1px 4px rgba(0,0,0,.22);
+}
+
+.page-name-dialog{
+  width:min(420px,calc(100vw - 32px));
+  border:0;
+  border-radius:16px;
+  padding:0;
+  box-shadow:0 20px 60px rgba(20,45,38,.28);
+  color:#183c34;
+  background:#fff;
+}
+.page-name-dialog::backdrop{background:rgba(13,31,27,.38)}
+.page-name-dialog form{display:grid;gap:14px;padding:22px}
+.page-name-dialog h2{margin:0;font-size:20px}
+.page-name-dialog p{margin:0;color:#52645f;line-height:1.45}
+.page-name-dialog label{font-size:13px;font-weight:700;color:#52645f}
+.page-name-dialog input{
+  width:100%;
+  min-height:44px;
+  box-sizing:border-box;
+  border:1px solid #b9cbc5;
+  border-radius:10px;
+  padding:10px 12px;
+  font:inherit;
+  font-size:16px;
+  outline:none;
+}
+.page-name-dialog input:focus{border-color:#2f7c69;box-shadow:0 0 0 3px rgba(47,124,105,.14)}
+.dialog-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:4px}
+.dialog-actions button{min-height:42px;padding:9px 16px;border-radius:10px;border:1px solid #b9cbc5;background:#fff;font:inherit;font-weight:700}
+#renamePageSaveBtn{border-color:#2f7c69;background:#2f7c69;color:#fff}
+.dialog-actions button.danger{border-color:#a93e3e;background:#a93e3e;color:#fff}
+
+.status-toast{
+  position:fixed;
+  left:50%;
+  bottom:72px;
+  z-index:2600;
+  max-width:min(520px,calc(100vw - 32px));
+  box-sizing:border-box;
+  transform:translate(-50%,10px);
+  opacity:0;
+  pointer-events:none;
+  padding:11px 15px;
+  border-radius:12px;
+  background:#254f44;
+  color:#fff;
+  font-size:14px;
+  font-weight:700;
+  line-height:1.35;
+  box-shadow:0 10px 28px rgba(18,43,36,.24);
+  transition:opacity .18s ease,transform .18s ease;
+}
+.status-toast.show{opacity:1;transform:translate(-50%,0)}
+.status-toast[data-type="success"]{background:#256b50}
+.status-toast[data-type="error"]{background:#983f3f}
+
+#autosaveState[data-status="error"]{
+  color:#9a3a3a;
+  font-weight:700;
+}
+
+@media (pointer:coarse){
+  .object-handle{width:24px;height:24px}
+  .resize-handle{right:-16px;bottom:-16px}
+  .rotate-handle{top:-42px;width:32px;height:32px;font-size:17px}
+  .object-edit{left:-20px;top:-20px;width:34px;height:34px;font-size:19px;line-height:32px}
+  .object-delete{right:-18px;top:-20px;width:34px;height:34px;font-size:24px;line-height:32px}
+  .geometry-close{width:34px;height:34px;right:-16px;top:-18px}
+  .geometry-rotate{width:32px;height:32px;top:-42px}
+  .geometry-resize,.geometry-angle,.geometry-radius{width:26px;height:26px}
+  .geometry-resize{right:-14px;bottom:-14px}
+  .geometry-action{min-height:36px;padding:8px 12px}
+  .dialog-actions button{min-height:48px;padding-inline:18px}
+  .page-name-dialog input{min-height:50px}
+  .status-toast{bottom:82px;font-size:15px;padding:12px 16px}
+}
