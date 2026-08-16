@@ -22,8 +22,16 @@ function aspectBox({width,height,ratio,minW,minH,maxW=MAX_OBJECT_W,maxH=MAX_OBJE
     if(w<minW){w=minW;h=w/r;}
   }
   if(w>maxW){w=maxW;h=w/r;}
-  if(h>maxH){h=maxH;w=h*r;}
+  if(h>maxH){h=maxH;w=h/r;}
   return {w,h};
+}
+
+function objectRenderKey(obj){
+  const common=[obj.id,obj.kind,obj.x,obj.y,obj.w,obj.h,obj.rotation||0,obj.color||'',obj.lineWidth||0,obj.locked?1:0];
+  if(obj.kind==='graph')return [...common,obj.expression||'',obj.xMin,obj.xMax,obj.yMin,obj.yMax,obj.majorStep].join('|');
+  if(obj.kind==='text')return [...common,obj.fontSize||32,obj.text||''].join('|');
+  if(obj.kind==='image')return [...common,String(obj.src||'').length,obj.legacyRaster?1:0].join('|');
+  return [...common,obj.shape||'',obj.startDeg??'',obj.endDeg??'',obj.numberMin??'',obj.numberMax??'',obj.showLabels===false?0:1].join('|');
 }
 
 export function resizeObjectDimensions({kind,shape,startW,startH,dx,dy,rotation=0,aspect=startW/Math.max(1,startH)}){
@@ -43,7 +51,7 @@ export function resizeObjectDimensions({kind,shape,startW,startH,dx,dy,rotation=
 }
 
 export class ObjectManager {
-  constructor({ state, layer, onChange }) { this.state=state; this.layer=layer; this.onChange=onChange; this.drag=null; this.bindGlobalPointerEvents(); }
+  constructor({ state, layer, onChange }) { this.state=state; this.layer=layer; this.onChange=onChange; this.drag=null; this.lastRenderKey=''; this.bindGlobalPointerEvents(); }
   get objects() { return activePage(this.state).objects; }
 
   notifyCapacity(){try{window.dispatchEvent(new CustomEvent('teacherboard:capacity-limit',{detail:{kind:'objects',limit:MAX_OBJECTS_PER_PAGE}}));}catch{}}
@@ -87,7 +95,7 @@ export class ObjectManager {
     return true;
   }
   selected(){return this.objects.find(o=>o.id===this.state.selection)||null;}
-  select(id){const obj=this.objects.find(o=>o.id===id);this.state.selection=obj?.locked?null:(id||null);this.render();}
+  select(id){const obj=this.objects.find(o=>o.id===id),next=obj?.locked?null:(id||null);if(this.state.selection===next)return;this.state.selection=next;this.render();}
   deleteSelected(){const id=this.state.selection;if(!id)return;const i=this.objects.findIndex(o=>o.id===id);if(i<0||this.objects[i].locked)return;pushHistory(this.state);this.objects.splice(i,1);this.state.selection=null;this.changed();}
   updateSelected(patch){
     const obj=this.selected();if(!obj||obj.locked)return false;
@@ -99,7 +107,8 @@ export class ObjectManager {
   }
   requestEdit(obj){if(!obj||!['text','graph'].includes(obj.kind))return;this.select(obj.id);this.layer.dispatchEvent(new CustomEvent('objectedit',{detail:{id:obj.id,kind:obj.kind}}));}
 
-  render(){this.layer.innerHTML='';for(const obj of this.objects)this.layer.appendChild(this.createElement(obj));}
+  renderKey(){return `${this.state.selection||''}::${this.objects.map(objectRenderKey).join('||')}`;}
+  render(){const key=this.renderKey();if(key===this.lastRenderKey)return;this.lastRenderKey=key;this.layer.innerHTML='';for(const obj of this.objects)this.layer.appendChild(this.createElement(obj));}
   createElement(obj){
     const el=document.createElement('div');
     el.className=`scene-object${obj.kind==='graph'?' graph-object':''}${obj.kind==='text'?' text-object':''}${obj.kind==='image'?' image-object':''}${obj.locked?' locked-object':''}${obj.id===this.state.selection?' selected':''}`;
@@ -122,7 +131,7 @@ export class ObjectManager {
   }
   updateElementGeometry(obj){
     const el=[...this.layer.children].find(node=>node.dataset?.id===obj.id);
-    if(!el){this.render();return;}
+    if(!el){this.lastRenderKey='';this.render();return;}
     Object.assign(el.style,{left:`${obj.x}px`,top:`${obj.y}px`,width:`${obj.w}px`,height:`${obj.h}px`,transform:`rotate(${obj.rotation||0}deg)`});
     if(obj.kind==='text'){
       const content=el.querySelector('.text-object-content');
