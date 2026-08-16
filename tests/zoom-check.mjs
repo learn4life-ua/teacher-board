@@ -8,7 +8,7 @@ const fail=message=>errors.push(message);
 const near=(a,b,eps=1e-9)=>Number.isFinite(a)&&Math.abs(a-b)<=eps;
 
 if(ZOOM_STEP!==.25) fail(`Zoom step must be 0.25, got ${ZOOM_STEP}.`);
-for(const value of [.5,.75,1,1.25,1.5,1.75,2]){
+for(const value of [.25,.5,.75,1,1.25,1.5,1.75,2]){
   if(!near(normalizeZoom(value),value)) fail(`Zoom ${value} was normalized incorrectly.`);
 }
 if(normalizeZoom(.1)!==MIN_ZOOM) fail('Zoom must clamp to MIN_ZOOM.');
@@ -18,7 +18,7 @@ if(normalizeZoom(1.11)!==1) fail('Persisted 111% must snap to 100%.');
 if(normalizeZoom(1.14)!==1.25) fail('Persisted 114% must snap to 125%.');
 
 const logical={x:640,y:360};
-for(const zoom of [.5,.75,1,1.25,1.5,1.75,2]){
+for(const zoom of [.25,.5,.75,1,1.25,1.5,1.75,2]){
   const rectLeft=137,rectTop=83;
   const clientX=rectLeft+logical.x*zoom;
   const clientY=rectTop+logical.y*zoom;
@@ -97,4 +97,4 @@ if(errors.length){
   errors.forEach(error=>console.error(`- ${error}`));
   process.exit(1);
 }
-console.log('TeacherBoard zoom check: OK (zoom presets, shared scene, rotated resize, image/circle/directed-shape geometry)');
+console.log('TeacherBoard zoom check: OK (zoom presets incl. 25%, shared scene, rotated resize, image/circle/directed-shape geometry)');
