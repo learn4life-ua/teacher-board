@@ -25,6 +25,8 @@
       type: 'text',
       x: clampNumber(item.x, 220),
       y: clampNumber(item.y, 150),
+      width: clampNumber(item.width ?? item.w, 520),
+      height: clampNumber(item.height ?? item.h, 90),
       text: String(item.text ?? ''),
       color: item.color || '#245d55',
       fontSize: clampNumber(item.fontSize, 28)
@@ -84,11 +86,7 @@
   }
 
   function migrateLegacyObjects(objects = []) {
-    if (!Array.isArray(objects)) return [];
-    return objects.map(item => {
-      if (item.kind === 'image') return normalizeImageObject(item);
-      return normalizeShapeObject(item);
-    });
+    return Array.isArray(objects) ? objects.map(normalizeObject) : [];
   }
 
   function normalizePage(page = {}, index = 0, pageHeight = DEFAULT_PAGE_HEIGHT) {
