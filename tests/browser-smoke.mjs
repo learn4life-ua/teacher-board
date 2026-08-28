@@ -50,6 +50,14 @@ async function canvasDiagnostics(page) {
   });
 }
 
+async function activeObjects(page) {
+  return page.evaluate(() => {
+    const data = JSON.parse(localStorage.getItem('teacherboard.v1') || '{}');
+    const index = Number(data.activePage) || 0;
+    return data.pages?.[index]?.objects || [];
+  });
+}
+
 async function openCleanPage(browser, viewport) {
   const context = await browser.newContext({ viewport });
   await context.route('https://cdnjs.cloudflare.com/**', route => route.abort());
@@ -143,6 +151,41 @@ async function desktopScenario(browser) {
   await page.locator('#redoBtn').click({ force: true });
   await page.waitForTimeout(250);
   assert.equal(await page.locator('.tb-object-shape').count(), 1, 'Redo should restore last object action');
+
+  console.log('stage: object-manipulation');
+  await page.locator('.tb-select-tool').click();
+  const shape = page.locator('.tb-object-shape');
+  await shape.click();
+  const beforeMove = (await activeObjects(page)).find(item => item.kind === 'shape');
+  assert.ok(beforeMove, 'Shape state must exist before move');
+  const shapeBox = await shape.boundingBox();
+  assert.ok(shapeBox, 'Shape must have a bounding box before move');
+  await page.mouse.move(shapeBox.x + shapeBox.width / 2, shapeBox.y + shapeBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(shapeBox.x + shapeBox.width / 2 + 70, shapeBox.y + shapeBox.height / 2 + 45, { steps: 5 });
+  await page.mouse.up();
+  await page.waitForTimeout(150);
+  const afterMove = (await activeObjects(page)).find(item => item.kind === 'shape');
+  assert.ok(afterMove && (afterMove.x !== beforeMove.x || afterMove.y !== beforeMove.y), `Move should update shape coordinates: ${JSON.stringify({ beforeMove, afterMove })}`);
+
+  const resizeHandle = page.locator('.tb-object-shape.selected .tb-resize-handle');
+  const resizeBox = await resizeHandle.boundingBox();
+  assert.ok(resizeBox, 'Selected shape must expose resize handle');
+  const beforeResize = { w: afterMove.w, h: afterMove.h };
+  await page.mouse.move(resizeBox.x + resizeBox.width / 2, resizeBox.y + resizeBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(resizeBox.x + resizeBox.width / 2 + 55, resizeBox.y + resizeBox.height / 2 + 40, { steps: 4 });
+  await page.mouse.up();
+  await page.waitForTimeout(150);
+  const afterResize = (await activeObjects(page)).find(item => item.kind === 'shape');
+  assert.ok(afterResize && afterResize.w > beforeResize.w && afterResize.h > beforeResize.h, `Resize should increase shape dimensions: ${JSON.stringify({ beforeResize, afterResize })}`);
+
+  await page.locator('.tb-object-shape.selected .tb-delete-handle').click();
+  await page.waitForTimeout(120);
+  assert.equal((await activeObjects(page)).filter(item => item.kind === 'shape').length, 0, 'Delete handle should remove selected shape');
+  await page.locator('#undoBtn').click({ force: true });
+  await page.waitForTimeout(180);
+  assert.equal((await activeObjects(page)).filter(item => item.kind === 'shape').length, 1, 'Undo should restore deleted shape');
 
   console.log('stage: pages-storage');
   const pagesBefore = await page.locator('.page-tab').count();
