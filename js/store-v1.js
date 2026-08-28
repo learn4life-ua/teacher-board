@@ -27,13 +27,39 @@
     return Array.isArray(value) ? value : [];
   }
 
+  function toRuntimeCache(documentState) {
+    const core = globalThis.TeacherBoardCore;
+    const normalized = core?.normalizeDocument
+      ? core.normalizeDocument(documentState || core.createBlankDocument(), readHeights())
+      : clone(documentState);
+
+    if (!normalized?.pages) return normalized;
+
+    return {
+      ...normalized,
+      pages: normalized.pages.map(page => ({
+        ...page,
+        image: page.raster?.image ?? page.image ?? null,
+        texts: [],
+        objects: (Array.isArray(page.items) ? page.items : []).map(item => ({
+          ...item,
+          kind: item.type || item.kind || 'shape',
+          w: Number(item.width ?? item.w) || (item.type === 'text' ? 520 : item.type === 'image' ? 480 : item.type === 'curtain' ? 420 : 120),
+          h: Number(item.height ?? item.h) || (item.type === 'text' ? 90 : item.type === 'image' ? 320 : item.type === 'curtain' ? 180 : 90)
+        }))
+      }))
+    };
+  }
+
   function writeCache(documentState) {
+    const runtimeDocument = toRuntimeCache(documentState);
     suppressMirror = true;
     try {
-      nativeSetItem.call(localStorage, DOCUMENT_KEY, JSON.stringify(documentState));
+      nativeSetItem.call(localStorage, DOCUMENT_KEY, JSON.stringify(runtimeDocument));
     } finally {
       suppressMirror = false;
     }
+    return runtimeDocument;
   }
 
   function writeHeightsCache(heights) {
@@ -72,9 +98,9 @@
 
   function setDocument(raw, { source = 'store' } = {}) {
     if (!raw || typeof raw !== 'object') return;
-    writeCache(raw);
-    enqueuePersist(raw);
-    publish(raw, source);
+    const runtimeDocument = writeCache(raw);
+    enqueuePersist(runtimeDocument);
+    publish(runtimeDocument, source);
     document.getElementById('autosaveState')?.replaceChildren(document.createTextNode('Збережено'));
   }
 
@@ -103,13 +129,13 @@
       // loadDocument may have returned migrated legacy data when IndexedDB was empty.
       // Persist it explicitly so IndexedDB becomes the durable source immediately.
       const persisted = await persistDocument(stored);
-      writeCache(persisted || stored);
+      const runtimeDocument = writeCache(persisted || stored);
       nativeSetItem.call(sessionStorage, HYDRATED_KEY, '1');
-      publish(persisted || stored, 'indexeddb');
+      publish(runtimeDocument, 'indexeddb');
 
       return {
         source: 'indexeddb',
-        document: persisted || stored,
+        document: runtimeDocument,
         changed: storedJson !== cachedJson
       };
     } catch (error) {
