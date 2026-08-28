@@ -7,6 +7,7 @@
   const board = document.getElementById('board');
   const canvas = document.getElementById('boardCanvas');
   const viewport = document.getElementById('boardViewport');
+  let menuIndex = 0;
 
   function readData() {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); }
@@ -92,24 +93,26 @@
   function enhancePageTabs() {
     if (!pagesEl) return;
     const menu = ensureMenu();
-    let menuIndex = 0;
 
     [...pagesEl.querySelectorAll('.page-tab')].forEach((tab, index) => {
-      tab.querySelectorAll('.page-menu-btn').forEach(el => el.remove());
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'page-menu-btn';
-      button.textContent = '⋮';
+      let button = tab.querySelector('.page-menu-btn');
+      if (!button) {
+        button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'page-menu-btn';
+        button.textContent = '⋮';
+        button.addEventListener('click', event => {
+          event.stopPropagation();
+          menuIndex = Number(button.dataset.pageIndex) || 0;
+          const rect = button.getBoundingClientRect();
+          menu.style.left = `${Math.min(rect.left, innerWidth - 170)}px`;
+          menu.style.top = `${Math.max(10, rect.top - 110)}px`;
+          menu.hidden = false;
+        });
+        tab.appendChild(button);
+      }
+      button.dataset.pageIndex = String(index);
       button.setAttribute('aria-label', `Дії зі сторінкою ${index + 1}`);
-      button.addEventListener('click', event => {
-        event.stopPropagation();
-        menuIndex = index;
-        const rect = button.getBoundingClientRect();
-        menu.style.left = `${Math.min(rect.left, innerWidth - 170)}px`;
-        menu.style.top = `${Math.max(10, rect.top - 110)}px`;
-        menu.hidden = false;
-      });
-      tab.appendChild(button);
     });
 
     if (!menu.dataset.bound) {
@@ -192,7 +195,7 @@
       new MutationObserver(() => {
         enhancePageTabs();
         setTimeout(syncPageHeight, 0);
-      }).observe(pagesEl, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+      }).observe(pagesEl, { childList: true, subtree: true });
     }
   }
 
