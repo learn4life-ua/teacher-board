@@ -5,8 +5,18 @@ const baseURL = 'http://127.0.0.1:4173/index.html';
 
 async function waitForAppReady(page) {
   await page.waitForLoadState('domcontentloaded');
-  await page.locator('#boardCanvas').waitFor({ state: 'attached', timeout: 10000 });
-  await page.locator('.toolbar').waitFor({ state: 'attached', timeout: 10000 });
+  const diagnostic = await page.evaluate(() => ({
+    url: location.href,
+    title: document.title,
+    hasCanvas: Boolean(document.getElementById('boardCanvas')),
+    hasToolbar: Boolean(document.querySelector('.toolbar')),
+    bodyStart: document.body?.innerText?.slice(0, 500) || '',
+    scripts: [...document.scripts].map(s => s.src || '[inline]').slice(0, 30),
+    styles: [...document.querySelectorAll('link[rel="stylesheet"]')].map(l => l.href).slice(0, 30)
+  }));
+  if (!diagnostic.hasCanvas || !diagnostic.hasToolbar) {
+    throw new Error(`TeacherBoard DOM not ready: ${JSON.stringify(diagnostic)}`);
+  }
 }
 
 async function waitForAutosave(page) {
