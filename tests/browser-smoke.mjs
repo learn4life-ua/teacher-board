@@ -10,9 +10,9 @@ async function waitForAppReady(page) {
     title: document.title,
     hasCanvas: Boolean(document.getElementById('boardCanvas')),
     hasToolbar: Boolean(document.querySelector('.toolbar')),
-    bodyStart: document.body?.innerText?.slice(0, 500) || '',
-    scripts: [...document.scripts].map(s => s.src || '[inline]').slice(0, 30),
-    styles: [...document.querySelectorAll('link[rel="stylesheet"]')].map(l => l.href).slice(0, 30)
+    hasObjectLayer: Boolean(document.getElementById('objectLayer')),
+    hasSelectTool: Boolean(document.querySelector('.tb-select-tool')),
+    bodyStart: document.body?.innerText?.slice(0, 500) || ''
   }));
   if (!diagnostic.hasCanvas || !diagnostic.hasToolbar) {
     throw new Error(`TeacherBoard DOM not ready: ${JSON.stringify(diagnostic)}`);
@@ -79,6 +79,7 @@ async function openCleanPage(browser, viewport) {
   page.on('pageerror', error => pageErrors.push(error.message));
   await page.goto(baseURL, { waitUntil: 'domcontentloaded', timeout: 15000 });
   await waitForAppReady(page);
+  await page.waitForFunction(() => Boolean(document.querySelector('.tb-select-tool') && document.getElementById('objectLayer')), null, { timeout: 5000 });
   return { context, page, consoleErrors, pageErrors };
 }
 
@@ -114,8 +115,17 @@ async function desktopScenario(browser) {
 
   console.log('stage: text');
   await page.locator('[data-tool="text"]').click();
+  await page.waitForTimeout(80);
   await page.mouse.click(box.x + 320, box.y + 220);
-  await page.locator('#textDialog').waitFor({ state: 'visible' });
+  await page.waitForTimeout(120);
+  const textState = await page.evaluate(() => ({
+    dialogOpen: Boolean(document.getElementById('textDialog')?.open),
+    activeTool: document.querySelector('.toolbar .tool.active')?.getAttribute('data-tool') || document.querySelector('.toolbar .tool.active')?.className || null,
+    bodyClass: document.body.className,
+    hasObjectLayer: Boolean(document.getElementById('objectLayer')),
+    hasSelectTool: Boolean(document.querySelector('.tb-select-tool'))
+  }));
+  if (!textState.dialogOpen) throw new Error(`Text tool did not open dialog: ${JSON.stringify({ textState, pageErrors, consoleErrors })}`);
   await page.locator('#textInput').fill('Тестовий текст');
   await page.locator('#textConfirmBtn').click();
   await page.locator('.tb-object-text').waitFor({ state: 'visible' });
@@ -139,9 +149,8 @@ async function desktopScenario(browser) {
 
   console.log('stage: pages-storage');
   const pagesBefore = await page.locator('.page-tab').count();
-  await page.locator('#addPageBtn').click({ force: true, noWaitAfter: true });
-  await page.waitForLoadState('domcontentloaded').catch(() => {});
-  await waitForAppReady(page);
+  await page.locator('#addPageBtn').click({ force: true });
+  await page.waitForTimeout(150);
   assert.equal(await page.locator('.page-tab').count(), pagesBefore + 1, 'Add page should create one page');
 
   const persisted = await page.evaluate(async () => {
