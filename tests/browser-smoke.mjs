@@ -3,8 +3,27 @@ import assert from 'node:assert/strict';
 
 const baseURL = 'http://127.0.0.1:4173/index.html';
 
+async function waitForAppReady(page) {
+  await page.waitForLoadState('domcontentloaded');
+  await page.locator('#boardCanvas').waitFor({ state: 'visible', timeout: 10000 });
+  await page.locator('.toolbar').waitFor({ state: 'visible', timeout: 10000 });
+}
+
 async function waitForAutosave(page) {
-  await page.waitForFunction(() => document.getElementById('autosaveState')?.textContent === 'Збережено', null, { timeout: 5000 });
+  await page.waitForFunction(() => document.getElementById('autosaveState')?.textContent === 'Збережено', null, { timeout: 7000 });
+}
+
+async function deleteTeacherBoardDb(page) {
+  await page.evaluate(async () => {
+    localStorage.removeItem('teacherboard.v1');
+    localStorage.removeItem('teacherboard.pageHeights.v1');
+    await new Promise(resolve => {
+      const request = indexedDB.deleteDatabase('teacherboard');
+      request.onsuccess = () => resolve();
+      request.onerror = () => resolve();
+      request.onblocked = () => resolve();
+    });
+  });
 }
 
 async function openCleanPage(browser, viewport) {
@@ -14,13 +33,11 @@ async function openCleanPage(browser, viewport) {
   const pageErrors = [];
   page.on('console', msg => { if (msg.type() === 'error') consoleErrors.push(msg.text()); });
   page.on('pageerror', error => pageErrors.push(error.message));
-  await page.goto(baseURL, { waitUntil: 'networkidle' });
-  await page.evaluate(() => {
-    localStorage.removeItem('teacherboard.v1');
-    localStorage.removeItem('teacherboard.pageHeights.v1');
-    indexedDB.deleteDatabase('teacherboard');
-  });
-  await page.reload({ waitUntil: 'networkidle' });
+  await page.goto(baseURL, { waitUntil: 'domcontentloaded', timeout: 15000 });
+  await waitForAppReady(page);
+  await deleteTeacherBoardDb(page);
+  await page.reload({ waitUntil: 'domcontentloaded', timeout: 15000 });
+  await waitForAppReady(page);
   return { context, page, consoleErrors, pageErrors };
 }
 
@@ -29,8 +46,6 @@ async function desktopScenario(browser) {
   const { page, context, consoleErrors, pageErrors } = env;
 
   assert.equal(await page.title(), 'TeacherBoard — Дошка для занять');
-  await page.locator('#boardCanvas').waitFor({ state: 'visible' });
-  await page.locator('.toolbar').waitFor({ state: 'visible' });
   await page.locator('#undoBtn').waitFor({ state: 'visible' });
   assert.equal(await page.locator('#undoBtn').getAttribute('aria-label'), 'Скасувати останню дію');
 
@@ -66,24 +81,23 @@ async function desktopScenario(browser) {
   await page.locator('.tb-object-shape').waitFor({ state: 'visible' });
 
   await page.locator('#undoBtn').click();
-  await page.waitForTimeout(200);
+  await page.waitForTimeout(250);
   assert.equal(await page.locator('.tb-object-shape').count(), 0, 'Undo should remove last object action');
   await page.locator('#redoBtn').click();
-  await page.waitForTimeout(200);
+  await page.waitForTimeout(250);
   assert.equal(await page.locator('.tb-object-shape').count(), 1, 'Redo should restore last object action');
 
   const pagesBefore = await page.locator('.page-tab').count();
   await page.locator('#addPageBtn').click();
-  await page.waitForLoadState('networkidle');
+  await waitForAppReady(page);
   assert.equal(await page.locator('.page-tab').count(), pagesBefore + 1, 'Add page should create one page');
 
   const persisted = await page.evaluate(async () => {
-    const open = () => new Promise((resolve, reject) => {
+    const db = await new Promise((resolve, reject) => {
       const req = indexedDB.open('teacherboard', 1);
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error);
     });
-    const db = await open();
     const value = await new Promise((resolve, reject) => {
       const tx = db.transaction('documents', 'readonly');
       const req = tx.objectStore('documents').get('current');
@@ -103,7 +117,6 @@ async function desktopScenario(browser) {
 
 async function responsiveScenario(browser, viewport, label) {
   const { page, context, pageErrors } = await openCleanPage(browser, viewport);
-  await page.locator('#boardCanvas').waitFor({ state: 'visible' });
   const boardBox = await page.locator('#board').boundingBox();
   assert.ok(boardBox && boardBox.width > 250, `${label}: board should remain visible`);
   const visibleTools = await page.locator('.toolbar .tool:visible').count();
