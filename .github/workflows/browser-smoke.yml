@@ -11,6 +11,7 @@ on:
       - 'css/**'
       - 'tests/browser-smoke.mjs'
       - 'tests/page-persistence.mjs'
+      - 'tests/content-regression.mjs'
       - '.github/workflows/browser-smoke.yml'
 
 permissions:
@@ -37,6 +38,7 @@ jobs:
           set -euo pipefail
           node --check tests/browser-smoke.mjs
           node --check tests/page-persistence.mjs
+          node --check tests/content-regression.mjs
           for file in \
             js/state.js \
             js/storage.js \
@@ -78,3 +80,6 @@ jobs:
 
       - name: Run page and persistence regression tests
         run: node tests/page-persistence.mjs
+
+      - name: Run content and legacy migration regression tests
+        run: node tests/content-regression.mjs
