@@ -13,19 +13,6 @@ async function waitForAutosave(page) {
   await page.waitForFunction(() => document.getElementById('autosaveState')?.textContent === 'Збережено', null, { timeout: 7000 });
 }
 
-async function deleteTeacherBoardDb(page) {
-  await page.evaluate(async () => {
-    localStorage.removeItem('teacherboard.v1');
-    localStorage.removeItem('teacherboard.pageHeights.v1');
-    await new Promise(resolve => {
-      const request = indexedDB.deleteDatabase('teacherboard');
-      request.onsuccess = () => resolve();
-      request.onerror = () => resolve();
-      request.onblocked = () => resolve();
-    });
-  });
-}
-
 async function openCleanPage(browser, viewport) {
   const context = await browser.newContext({ viewport });
   const page = await context.newPage();
@@ -34,9 +21,6 @@ async function openCleanPage(browser, viewport) {
   page.on('console', msg => { if (msg.type() === 'error') consoleErrors.push(msg.text()); });
   page.on('pageerror', error => pageErrors.push(error.message));
   await page.goto(baseURL, { waitUntil: 'domcontentloaded', timeout: 15000 });
-  await waitForAppReady(page);
-  await deleteTeacherBoardDb(page);
-  await page.reload({ waitUntil: 'domcontentloaded', timeout: 15000 });
   await waitForAppReady(page);
   return { context, page, consoleErrors, pageErrors };
 }
