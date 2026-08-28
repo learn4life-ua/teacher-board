@@ -467,7 +467,11 @@
   }
 
   function watchStorage() {
-    window.addEventListener('teacherboard:storage-updated', () => { selectedId = null; if (textLayer) textLayer.innerHTML = ''; renderObjects(); });
+    window.addEventListener('teacherboard:storage-updated', () => {
+      if (textLayer) textLayer.innerHTML = '';
+      if (selectedId && !currentObjects().some(item => item.id === selectedId)) selectedId = null;
+      renderObjects();
+    });
     new MutationObserver(() => setTimeout(renderObjects, 0)).observe(document.getElementById('pages'), { childList: true, subtree: true, attributes: true });
   }
 
