@@ -1,6 +1,6 @@
 # TeacherBoard v1 Refactor Status
 
-## Current milestone: editable objects cutover
+## Current milestone: unified editable object model
 
 Branch: `refactor-v1`
 
@@ -13,24 +13,35 @@ Branch: `refactor-v1`
 - Bounded history helper in `js/history.js`.
 - Central SVG shape renderer in `js/objects.js`.
 - Legacy autosave compatibility bridge in `js/compat.js`.
-- New editable object runtime in `js/objects-runtime.js`.
-- `index.html` no longer loads `js/v3.js`.
-- `index.html` no longer loads `fixes-v5.js` or `fixes-v6.js`.
-- `fixes-v7.js` is not needed by the new renderer.
+- `index.html` no longer loads `js/v3.js` or `fixes-v5.js` / `fixes-v6.js`.
+- `fixes-v7.js` is not needed by the new SVG renderer.
+- Unified runtime v2 added in `js/objects-runtime-v2.js`.
+- Shapes, images, text and curtain use the editable object layer.
+- Legacy `page.texts` are migrated into editable text objects on startup.
+- Text objects can be edited by double-clicking.
+- Curtain is movable and resizable instead of being raster-only.
 - Images inserted from file or clipboard are editable objects.
 - Geometry and math presets use one renderer.
 - Object movement, resize and deletion are centralized.
-- PNG/PDF export includes editable objects.
+- Object operations are connected to bounded history.
 - Legacy localStorage writes are mirrored to IndexedDB.
+- Dedicated object styles live in `css/objects-v2.css`.
 
-### Still legacy
+### Still legacy / transitional
 
 - Pen, marker and eraser remain raster canvas operations in `app.js` by design.
-- Text still uses the old `textLayer` implementation.
-- Curtain still originates as a raster canvas tool.
 - Page CRUD and page height extension still live in legacy code.
-- CSS is still layered as `style.css`, `compact.css`, `v2.css`, `v3.css`, `mobile.css`.
+- `compat.js` temporarily protects object data from old `app.js` autosave.
+- IndexedDB is currently a mirror while legacy localStorage remains the live source for old code.
+- CSS is still layered as `style.css`, `compact.css`, `v2.css`, `v3.css`, `objects-v2.css`, `mobile.css`.
 - UI icons are still mixed text symbols rather than one SVG icon system.
+- History is only partially chronological across legacy raster actions and new object actions. Full shared history requires the raster runtime to move onto the central state layer.
+
+## Verification status
+
+The runtime v2 is connected on the refactor branch, but browser verification is still required before merging.
+
+A local `node --check` attempt could not be completed because the execution environment could not resolve `github.com` to clone the branch. This is an environment/network limitation, not a passed syntax check.
 
 ## Verification matrix before deleting old files
 
@@ -54,7 +65,21 @@ Branch: `refactor-v1`
 - [ ] Object can be moved.
 - [ ] Object can be resized.
 - [ ] Object can be deleted with handle.
-- [ ] Object can be deleted with Delete/Backspace.
+
+### Text
+
+- [ ] Existing legacy text migrates once without duplication.
+- [ ] New text is created as an editable object.
+- [ ] Double-click edits text.
+- [ ] Text can be moved and resized.
+- [ ] Text persists after raster drawing and reload.
+
+### Curtain
+
+- [ ] Curtain is created as an object.
+- [ ] Curtain can be moved.
+- [ ] Curtain can be resized.
+- [ ] Curtain survives reload.
 
 ### Images
 
@@ -74,7 +99,7 @@ Branch: `refactor-v1`
 
 ### Clear / export
 
-- [ ] Clear removes raster, text and editable objects.
+- [ ] Clear removes raster and all editable objects.
 - [ ] PNG contains background, raster, text and objects.
 - [ ] PDF contains all pages and objects.
 
@@ -84,19 +109,23 @@ Branch: `refactor-v1`
 - [ ] Legacy localStorage data migrates without loss.
 - [ ] IndexedDB mirror receives normalized document.
 
-### Responsive
+### Responsive / accessibility
 
 - [ ] Desktop toolbar remains usable.
 - [ ] Tablet toolbar remains usable.
 - [ ] Phone menu remains usable.
 - [ ] Shape menu fits viewport.
 - [ ] Resize/delete handles are usable by touch.
+- [ ] Focus indicators are visible.
+- [ ] Icon buttons have accessible names.
+- [ ] Keyboard navigation is usable.
 
 ## Next implementation block
 
-1. Move text from `textLayer` into the common object model.
-2. Convert curtain to a movable/resizable object.
-3. Integrate object operations into shared history.
-4. Add focus-visible and keyboard accessibility.
-5. Replace text-symbol UI icons with one SVG icon system.
+1. Add focus-visible and accessibility labels across the existing UI.
+2. Improve touch hit areas without making handles visually oversized.
+3. Consolidate clear/export handling around the object model.
+4. Move page CRUD onto the central state layer.
+5. Remove compatibility bridge after page/state cutover.
 6. Consolidate CSS layers after behavior is stable.
+7. Replace text-symbol UI icons with one SVG icon system after functional stabilization.
