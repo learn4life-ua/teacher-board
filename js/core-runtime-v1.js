@@ -280,10 +280,16 @@
     window.addEventListener('beforeunload', saveRasterNow);
   }
 
-  function boot() {
+  async function boot() {
+    try {
+      await globalThis.TeacherBoardStore?.ready;
+    } catch (error) {
+      console.warn('[TeacherBoard] Durable store initialization failed; continuing with local cache.', error);
+    }
     const data = readData();
     if (!localStorage.getItem(STORAGE_KEY)) writeData(data);
     renderPages(); syncHeight(); loadPage(activeIndex(data)); bind(); setTool('pen');
+    window.dispatchEvent(new CustomEvent('teacherboard:core-ready'));
   }
 
   globalThis.TeacherBoardCoreRuntime = { renderPages, loadPage, saveRasterNow, switchPage, setTool };
