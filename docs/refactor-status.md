@@ -1,6 +1,6 @@
 # TeacherBoard v1 Refactor Status
 
-## Current milestone: lifecycle, export and accessibility cutover
+## Current milestone: legacy runtime reduction
 
 Branch: `refactor-v1`
 
@@ -13,20 +13,22 @@ Branch: `refactor-v1`
 - Bounded history helper in `js/history.js`.
 - Central SVG shape renderer in `js/objects.js`.
 - Legacy autosave compatibility bridge in `js/compat.js`.
-- `index.html` no longer loads `js/v3.js` or `fixes-v5.js` / `fixes-v6.js`.
+- `index.html` no longer loads `js/v2.js`, `js/v3.js` or `fixes-v5.js` / `fixes-v6.js`.
 - `fixes-v7.js` is not needed by the new SVG renderer.
-- Unified runtime v2 added in `js/objects-runtime-v2.js`.
+- `js/ui-v1.js` now owns pen controls, fit-to-screen, presentation controls and pagebar collapse.
+- `js/pages-v1.js` now owns rename, delete, duplicate context actions and page-height extension.
+- Unified object runtime lives in `js/objects-runtime-v2.js`.
 - Shapes, images, text and curtain use the editable object layer.
 - Legacy `page.texts` are migrated into editable text objects on startup.
 - Text objects can be edited by double-clicking.
-- Curtain is movable and resizable instead of being raster-only.
+- Curtain is movable and resizable instead of raster-only.
 - Images inserted from file or clipboard are editable objects.
 - Geometry and math presets use one renderer.
 - Object movement, resize and deletion are centralized.
 - Object operations are connected to bounded history.
 - Legacy localStorage writes are mirrored to IndexedDB.
 - Dedicated object styles live in `css/objects-v2.css`.
-- `js/lifecycle-v1.js` owns safe clear, add-page and duplicate-page actions.
+- `js/lifecycle-v1.js` owns safe clear, add-page and top-level duplicate-page actions.
 - Clear removes raster, legacy text and editable objects from the active page.
 - Adding a page starts with clean object state and matching default page height.
 - Duplicating a page clones editable objects and page height.
@@ -36,13 +38,12 @@ Branch: `refactor-v1`
 
 ### Still legacy / transitional
 
-- Pen, marker and eraser remain raster canvas operations in `app.js` by design.
-- Page rename/delete and page-height extension still depend on legacy `v2.js` behavior.
-- `compat.js` temporarily protects object data from old `app.js` autosave.
-- IndexedDB is currently a mirror while legacy localStorage remains the live source for old code.
-- CSS is still layered as `style.css`, `compact.css`, `v2.css`, `v3.css`, `objects-v2.css`, `mobile.css`, `accessibility-v1.css`.
+- `app.js` remains the last large legacy runtime and still owns raster drawing, background selection, zoom, fullscreen, laser, the old in-memory page state and legacy autosave.
+- `compat.js` is still required because `app.js` can otherwise overwrite editable-object data during autosave.
+- IndexedDB is currently a mirror while legacy localStorage remains the live source for `app.js`.
+- CSS is still layered as `style.css`, `compact.css`, `v2.css`, `v3.css`, `objects-v2.css`, `mobile.css`, `accessibility-v1.css`. The `v2.css` / `v3.css` names are now styling legacy only; their JS counterparts are not active.
 - UI icons are still mixed text symbols rather than one SVG icon system.
-- History is only partially chronological across legacy raster actions and new object actions. Full shared history requires the raster runtime to move onto the central state layer.
+- History is only partially chronological across legacy raster actions and new object actions. Full shared history requires raster drawing to move off the old `app.js` state.
 
 ## Verification status
 
@@ -131,9 +132,10 @@ A local `node --check` attempt could not be completed because the execution envi
 
 ## Next implementation block
 
-1. Move rename/delete/page-height operations out of legacy `v2.js`.
-2. Remove `compat.js` after full page/state cutover.
-3. Consolidate raster + object history into one chronological undo/redo model.
-4. Consolidate CSS layers after behavior is stable.
-5. Replace text-symbol UI icons with one SVG icon system.
-6. Perform browser verification before opening a merge PR.
+1. Replace legacy `app.js` with a focused raster/background/view runtime.
+2. Remove `compat.js` after the old in-memory autosave is gone.
+3. Make IndexedDB the canonical storage and keep localStorage only as migration input/fallback metadata if needed.
+4. Consolidate raster + object history into one chronological undo/redo model.
+5. Consolidate CSS layers after behavior is stable.
+6. Replace text-symbol UI icons with one SVG icon system.
+7. Perform browser verification before opening a merge PR.
