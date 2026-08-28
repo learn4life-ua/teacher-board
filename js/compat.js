@@ -64,6 +64,11 @@
     }
   }
 
+  function signalUiRefresh() {
+    const pages = document.getElementById('pages');
+    if (pages) pages.classList.toggle('tb-storage-tick');
+  }
+
   Storage.prototype.setItem = function patchedSetItem(key, value) {
     if (this !== localStorage || key !== STORAGE_KEY) {
       return nativeSetItem.call(this, key, value);
@@ -76,6 +81,7 @@
     const merged = mergeObjects(previous, incoming);
     const serialized = JSON.stringify(merged);
     const result = nativeSetItem.call(this, key, serialized);
+    signalUiRefresh();
     window.dispatchEvent(new CustomEvent('teacherboard:storage-updated', { detail: merged }));
     queueMicrotask(() => mirror(merged));
     return result;
