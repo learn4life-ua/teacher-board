@@ -5,12 +5,31 @@ const baseURL = 'http://127.0.0.1:4173/index.html';
 
 async function waitForAppReady(page) {
   await page.waitForLoadState('domcontentloaded');
-  await page.locator('#boardCanvas').waitFor({ state: 'visible', timeout: 10000 });
-  await page.locator('.toolbar').waitFor({ state: 'visible', timeout: 10000 });
+  await page.locator('#boardCanvas').waitFor({ state: 'attached', timeout: 10000 });
+  await page.locator('.toolbar').waitFor({ state: 'attached', timeout: 10000 });
 }
 
 async function waitForAutosave(page) {
   await page.waitForFunction(() => document.getElementById('autosaveState')?.textContent === 'Збережено', null, { timeout: 7000 });
+}
+
+async function canvasDiagnostics(page) {
+  return page.evaluate(() => {
+    const canvas = document.getElementById('boardCanvas');
+    const board = document.getElementById('board');
+    const wrap = document.getElementById('boardWrap');
+    const cs = canvas ? getComputedStyle(canvas) : null;
+    const bs = board ? getComputedStyle(board) : null;
+    const cr = canvas?.getBoundingClientRect();
+    const br = board?.getBoundingClientRect();
+    const wr = wrap?.getBoundingClientRect();
+    return {
+      canvas: canvas ? { display: cs.display, visibility: cs.visibility, opacity: cs.opacity, width: cr.width, height: cr.height } : null,
+      board: board ? { display: bs.display, visibility: bs.visibility, width: br.width, height: br.height } : null,
+      wrap: wrap ? { width: wr.width, height: wr.height } : null,
+      bodyClass: document.body.className
+    };
+  });
 }
 
 async function openCleanPage(browser, viewport) {
@@ -36,7 +55,8 @@ async function desktopScenario(browser) {
 
   const canvas = page.locator('#boardCanvas');
   const box = await canvas.boundingBox();
-  assert.ok(box && box.width > 300 && box.height > 200, 'Canvas should have usable dimensions');
+  const diagnostics = await canvasDiagnostics(page);
+  assert.ok(box && box.width > 300 && box.height > 200, `Canvas should have usable dimensions: ${JSON.stringify(diagnostics)}`);
 
   await page.mouse.move(box.x + 120, box.y + 120);
   await page.mouse.down();
@@ -103,7 +123,8 @@ async function desktopScenario(browser) {
 async function responsiveScenario(browser, viewport, label) {
   const { page, context, pageErrors } = await openCleanPage(browser, viewport);
   const boardBox = await page.locator('#board').boundingBox();
-  assert.ok(boardBox && boardBox.width > 250, `${label}: board should remain visible`);
+  const diagnostics = await canvasDiagnostics(page);
+  assert.ok(boardBox && boardBox.width > 250, `${label}: board should remain visible: ${JSON.stringify(diagnostics)}`);
   const visibleTools = await page.locator('.toolbar .tool:visible').count();
   assert.ok(visibleTools >= 3, `${label}: toolbar should expose usable controls`);
   assert.equal(pageErrors.length, 0, `${label}: no page errors expected`);
