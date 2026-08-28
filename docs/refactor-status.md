@@ -1,6 +1,6 @@
 # TeacherBoard v1 Refactor Status
 
-## Current milestone: legacy runtime cutover
+## Current milestone: canonical storage cutover
 
 Branch: `refactor-v1`
 
@@ -10,10 +10,14 @@ Branch: `refactor-v1`
 - Target architecture documented.
 - Central document/page normalization in `js/state.js`.
 - IndexedDB storage adapter in `js/storage.js`.
+- Canonical write-through store in `js/store-v1.js`.
+- On first run, legacy `localStorage` data is normalized and persisted into IndexedDB.
+- IndexedDB is now the durable source; `localStorage` remains a synchronous startup cache and migration fallback for transitional modules.
+- `js/compat.js` has been removed from the branch.
 - Bounded history helper in `js/history.js`.
 - Central SVG shape renderer in `js/objects.js`.
 - `index.html` no longer loads `js/app.js`, `js/v2.js`, `js/v3.js` or any `fixes-v*` runtime.
-- `js/core-runtime-v1.js` now owns raster pen/marker/eraser, raster arrow, page rendering/switching, background, zoom, fullscreen, laser and raster persistence.
+- `js/core-runtime-v1.js` owns raster pen/marker/eraser, raster arrow, page rendering/switching, background, zoom, fullscreen, laser and raster persistence.
 - `js/ui-v1.js` owns pen controls, fit-to-screen, presentation controls and pagebar collapse.
 - `js/pages-v1.js` owns rename, delete, duplicate context actions and page-height extension.
 - `js/interaction-bridge-v1.js` owns the insert button, math-symbol dialog entry and math preset buttons.
@@ -33,19 +37,17 @@ Branch: `refactor-v1`
 - `js/export-v1.js` composes background, raster and editable objects for PNG/PDF.
 - `js/accessibility-v1.js` adds accessible labels and pressed states.
 - `css/accessibility-v1.css` adds visible focus indicators, reduced-motion support and larger touch hit areas.
-- Legacy localStorage writes are still mirrored into IndexedDB during the transition.
 
 ### Still transitional
 
-- `compat.js` is no longer needed to protect objects from `app.js`, because `app.js` is not active, but it is still temporarily used to mirror direct localStorage writes from transitional modules into IndexedDB.
-- IndexedDB is not yet the canonical live source. The active runtime still reads/writes `teacherboard.v1` in localStorage and mirrors normalized state to IndexedDB.
-- Raster and object history are still separate/partially chronological. A fully shared history requires the canonical state/storage cutover.
-- CSS is still layered as `style.css`, `compact.css`, `v2.css`, `v3.css`, `objects-v2.css`, `mobile.css`, `accessibility-v1.css`. The `v2.css` / `v3.css` names are styling legacy only; their JS counterparts are not active.
+- Active modules still use synchronous `localStorage` calls internally. `store-v1.js` intercepts writes for TeacherBoard document/height keys and persists them into IndexedDB. A later cleanup can replace those direct calls with `TeacherBoardStore` methods, but durability no longer depends on the removed compatibility bridge.
+- Raster and object history are still separate/partially chronological. A fully shared history is the remaining P0 behavior task.
+- CSS is still layered as `style.css`, `compact.css`, `v2.css`, `v3.css`, `objects-v2.css`, `mobile.css`, `accessibility-v1.css`. The old CSS names are still present only for styling compatibility.
 - UI icons are still mixed text symbols rather than one SVG icon system.
 
 ## Verification status
 
-The refactor branch now runs without the old `app.js`, `v2.js`, `v3.js` and `fixes-v*` JavaScript layers, but browser verification is still required before merging into `main`.
+The refactor branch now runs without the old `app.js`, `v2.js`, `v3.js`, `fixes-v*` and `compat.js` JavaScript layers. Browser verification is still required before merging into `main`.
 
 A local `node --check` attempt could not be completed because the execution environment could not resolve `github.com` to clone the branch. This is an environment/network limitation, not a passed syntax check.
 
@@ -115,7 +117,9 @@ A local `node --check` attempt could not be completed because the execution envi
 
 - [ ] Reload preserves pages and objects.
 - [ ] Legacy localStorage data migrates without loss.
-- [ ] IndexedDB mirror receives normalized document.
+- [ ] Migrated legacy state is persisted into IndexedDB.
+- [ ] New writes reach IndexedDB through `store-v1.js`.
+- [ ] App still works when IndexedDB is unavailable, using cache fallback.
 
 ### Responsive / accessibility
 
@@ -131,8 +135,8 @@ A local `node --check` attempt could not be completed because the execution envi
 
 ## Next implementation block
 
-1. Make IndexedDB the canonical storage and remove the `Storage.prototype.setItem` compatibility patch.
-2. Consolidate raster + object history into one chronological undo/redo model.
+1. Consolidate raster + object history into one chronological undo/redo model.
+2. Perform browser verification of storage migration and all core interactions.
 3. Consolidate CSS layers after behavior is stable.
 4. Replace text-symbol UI icons with one SVG icon system.
-5. Perform browser verification before opening a merge PR.
+5. Open a merge PR only after the verification matrix is completed.
