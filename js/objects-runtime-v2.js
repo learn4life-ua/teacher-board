@@ -109,6 +109,14 @@
     };
   }
 
+  function applySelection(id) {
+    selectedId = id || null;
+    objectLayer?.querySelectorAll('.tb-object').forEach(el => {
+      el.classList.toggle('selected', Boolean(selectedId) && el.dataset.id === selectedId);
+    });
+    document.body.classList.toggle('tb-has-selection', Boolean(selectedId));
+  }
+
   function renderObjects() {
     if (!objectLayer) return;
     objectLayer.innerHTML = '';
@@ -377,7 +385,7 @@
     event.preventDefault(); event.stopPropagation();
     const id = event.currentTarget.dataset.id;
     const object = currentObjects().find(item => item.id === id); if (!object) return;
-    selectedId = id; renderObjects();
+    applySelection(id);
     drag = { mode: 'move', id, startClientX: event.clientX, startClientY: event.clientY, startX: Number(object.x || 0), startY: Number(object.y || 0), before: readData() };
   }
 
