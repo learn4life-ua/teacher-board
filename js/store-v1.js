@@ -100,11 +100,18 @@
         : cached;
       const cachedJson = cachedNormalized ? JSON.stringify(cachedNormalized) : '';
 
-      writeCache(stored);
+      // loadDocument may have returned migrated legacy data when IndexedDB was empty.
+      // Persist it explicitly so IndexedDB becomes the durable source immediately.
+      const persisted = await persistDocument(stored);
+      writeCache(persisted || stored);
       nativeSetItem.call(sessionStorage, HYDRATED_KEY, '1');
-      publish(stored, 'indexeddb');
+      publish(persisted || stored, 'indexeddb');
 
-      return { source: 'indexeddb', document: stored, changed: storedJson !== cachedJson };
+      return {
+        source: 'indexeddb',
+        document: persisted || stored,
+        changed: storedJson !== cachedJson
+      };
     } catch (error) {
       console.warn('[TeacherBoard] IndexedDB hydration failed; using local cache.', error);
       return { source: 'cache', document: readCache(), error };
