@@ -1,6 +1,6 @@
 # TeacherBoard v1 Refactor Status
 
-## Current milestone: unified editable object model
+## Current milestone: lifecycle, export and accessibility cutover
 
 Branch: `refactor-v1`
 
@@ -26,20 +26,27 @@ Branch: `refactor-v1`
 - Object operations are connected to bounded history.
 - Legacy localStorage writes are mirrored to IndexedDB.
 - Dedicated object styles live in `css/objects-v2.css`.
+- `js/lifecycle-v1.js` owns safe clear, add-page and duplicate-page actions.
+- Clear removes raster, legacy text and editable objects from the active page.
+- Adding a page starts with clean object state and matching default page height.
+- Duplicating a page clones editable objects and page height.
+- `js/export-v1.js` composes background, raster and editable objects for PNG/PDF.
+- `js/accessibility-v1.js` adds accessible labels and pressed states.
+- `css/accessibility-v1.css` adds visible focus indicators, reduced-motion support and larger touch hit areas.
 
 ### Still legacy / transitional
 
 - Pen, marker and eraser remain raster canvas operations in `app.js` by design.
-- Page CRUD and page height extension still live in legacy code.
+- Page rename/delete and page-height extension still depend on legacy `v2.js` behavior.
 - `compat.js` temporarily protects object data from old `app.js` autosave.
 - IndexedDB is currently a mirror while legacy localStorage remains the live source for old code.
-- CSS is still layered as `style.css`, `compact.css`, `v2.css`, `v3.css`, `objects-v2.css`, `mobile.css`.
+- CSS is still layered as `style.css`, `compact.css`, `v2.css`, `v3.css`, `objects-v2.css`, `mobile.css`, `accessibility-v1.css`.
 - UI icons are still mixed text symbols rather than one SVG icon system.
 - History is only partially chronological across legacy raster actions and new object actions. Full shared history requires the raster runtime to move onto the central state layer.
 
 ## Verification status
 
-The runtime v2 is connected on the refactor branch, but browser verification is still required before merging.
+The refactor branch contains the new runtime layers, but browser verification is still required before merging into `main`.
 
 A local `node --check` attempt could not be completed because the execution environment could not resolve `github.com` to clone the branch. This is an environment/network limitation, not a passed syntax check.
 
@@ -100,8 +107,9 @@ A local `node --check` attempt could not be completed because the execution envi
 ### Clear / export
 
 - [ ] Clear removes raster and all editable objects.
-- [ ] PNG contains background, raster, text and objects.
-- [ ] PDF contains all pages and objects.
+- [ ] PNG contains background, raster, text, images, shapes and curtain.
+- [ ] PDF contains all pages and editable objects.
+- [ ] Extended pages export at their full height.
 
 ### Persistence
 
@@ -119,13 +127,13 @@ A local `node --check` attempt could not be completed because the execution envi
 - [ ] Focus indicators are visible.
 - [ ] Icon buttons have accessible names.
 - [ ] Keyboard navigation is usable.
+- [ ] Reduced-motion preference is respected.
 
 ## Next implementation block
 
-1. Add focus-visible and accessibility labels across the existing UI.
-2. Improve touch hit areas without making handles visually oversized.
-3. Consolidate clear/export handling around the object model.
-4. Move page CRUD onto the central state layer.
-5. Remove compatibility bridge after page/state cutover.
-6. Consolidate CSS layers after behavior is stable.
-7. Replace text-symbol UI icons with one SVG icon system after functional stabilization.
+1. Move rename/delete/page-height operations out of legacy `v2.js`.
+2. Remove `compat.js` after full page/state cutover.
+3. Consolidate raster + object history into one chronological undo/redo model.
+4. Consolidate CSS layers after behavior is stable.
+5. Replace text-symbol UI icons with one SVG icon system.
+6. Perform browser verification before opening a merge PR.
