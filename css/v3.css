@@ -2,7 +2,8 @@
 .board{overflow:visible}
 .tb-object-layer{position:absolute;inset:0;z-index:5;pointer-events:none;overflow:visible}
 body.tb-select-mode .tb-object-layer{pointer-events:auto}
-.tb-object{position:absolute;box-sizing:border-box;touch-action:none;user-select:none;pointer-events:auto;transform-origin:center;min-width:28px;min-height:28px}
+.tb-object{position:absolute;box-sizing:border-box;touch-action:none;user-select:none;pointer-events:none;transform-origin:center;min-width:28px;min-height:28px}
+body.tb-select-mode .tb-object{pointer-events:auto}
 .tb-object svg,.tb-object img{width:100%;height:100%;display:block;pointer-events:none;object-fit:contain}
 .tb-object.selected{outline:2px solid #245d55;outline-offset:3px}
 .tb-object-handle{display:none;position:absolute;z-index:3;width:18px;height:18px;border:2px solid #fff;background:#245d55;box-shadow:0 1px 5px rgba(0,0,0,.2)}
