@@ -379,7 +379,6 @@
     const object = currentObjects().find(item => item.id === id); if (!object) return;
     selectedId = id; renderObjects();
     drag = { mode: 'move', id, startClientX: event.clientX, startClientY: event.clientY, startX: Number(object.x || 0), startY: Number(object.y || 0), before: readData() };
-    event.currentTarget.setPointerCapture?.(event.pointerId);
   }
 
   function resizePointerDown(event) {
