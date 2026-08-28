@@ -6,7 +6,7 @@
   const DEFAULT_BACKGROUND = 'clean';
 
   function uid(prefix = 'id') {
-    if (globalThis.crypto?.randomUUID) return `${prefix}_${crypto.randomUUID()}`;
+    if (globalThis.crypto?.randomUUID) return `${prefix}_${globalThis.crypto.randomUUID()}`;
     return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 9)}`;
   }
 
@@ -134,7 +134,9 @@
   }
 
   function cloneDocument(documentState) {
-    return structuredClone ? structuredClone(documentState) : JSON.parse(JSON.stringify(documentState));
+    return typeof globalThis.structuredClone === 'function'
+      ? globalThis.structuredClone(documentState)
+      : JSON.parse(JSON.stringify(documentState));
   }
 
   globalThis.TeacherBoardCore = Object.assign(globalThis.TeacherBoardCore || {}, {
