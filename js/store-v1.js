@@ -27,6 +27,17 @@
     return Array.isArray(value) ? value : [];
   }
 
+  function toRuntimeObject(item = {}) {
+    const { type, width, height, kind: legacyKind, w: legacyW, h: legacyH, ...rest } = item;
+    const kind = type || legacyKind || 'shape';
+    return {
+      ...rest,
+      kind,
+      w: Number(width ?? legacyW) || (kind === 'text' ? 520 : kind === 'image' ? 480 : kind === 'curtain' ? 420 : 120),
+      h: Number(height ?? legacyH) || (kind === 'text' ? 90 : kind === 'image' ? 320 : kind === 'curtain' ? 180 : 90)
+    };
+  }
+
   function toRuntimeCache(documentState) {
     const core = globalThis.TeacherBoardCore;
     const normalized = core?.normalizeDocument
@@ -37,17 +48,20 @@
 
     return {
       ...normalized,
-      pages: normalized.pages.map(page => ({
-        ...page,
-        image: page.raster?.image ?? page.image ?? null,
-        texts: [],
-        objects: (Array.isArray(page.items) ? page.items : []).map(item => ({
-          ...item,
-          kind: item.type || item.kind || 'shape',
-          w: Number(item.width ?? item.w) || (item.type === 'text' ? 520 : item.type === 'image' ? 480 : item.type === 'curtain' ? 420 : 120),
-          h: Number(item.height ?? item.h) || (item.type === 'text' ? 90 : item.type === 'image' ? 320 : item.type === 'curtain' ? 180 : 90)
-        }))
-      }))
+      pages: normalized.pages.map(page => {
+        const { raster, items, image: legacyImage, objects: legacyObjects, texts: legacyTexts, ...runtimePage } = page;
+        const sourceItems = Array.isArray(items)
+          ? items
+          : Array.isArray(legacyObjects)
+            ? legacyObjects
+            : [];
+        return {
+          ...runtimePage,
+          image: raster?.image ?? legacyImage ?? null,
+          texts: Array.isArray(legacyTexts) ? legacyTexts : [],
+          objects: sourceItems.map(toRuntimeObject)
+        };
+      })
     };
   }
 
