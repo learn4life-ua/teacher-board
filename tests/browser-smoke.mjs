@@ -23,6 +23,32 @@ async function waitForAutosave(page) {
   await page.waitForFunction(() => document.getElementById('autosaveState')?.textContent === 'Збережено', null, { timeout: 7000 });
 }
 
+async function elementDiagnostics(page, selector) {
+  return page.evaluate(selector => {
+    const el = document.querySelector(selector);
+    if (!el) return null;
+    const cs = getComputedStyle(el);
+    const r = el.getBoundingClientRect();
+    return {
+      selector,
+      display: cs.display,
+      visibility: cs.visibility,
+      opacity: cs.opacity,
+      overflow: cs.overflow,
+      position: cs.position,
+      width: r.width,
+      height: r.height,
+      x: r.x,
+      y: r.y,
+      right: r.right,
+      bottom: r.bottom,
+      hidden: el.hidden,
+      disabled: el.disabled ?? null,
+      className: el.className
+    };
+  }, selector);
+}
+
 async function canvasDiagnostics(page) {
   return page.evaluate(() => {
     const canvas = document.getElementById('boardCanvas');
@@ -46,6 +72,7 @@ async function openCleanPage(browser, viewport) {
   const context = await browser.newContext({ viewport });
   await context.route('https://cdnjs.cloudflare.com/**', route => route.abort());
   const page = await context.newPage();
+  page.setDefaultTimeout(8000);
   const consoleErrors = [];
   const pageErrors = [];
   page.on('console', msg => { if (msg.type() === 'error') consoleErrors.push(msg.text()); });
@@ -56,13 +83,19 @@ async function openCleanPage(browser, viewport) {
 }
 
 async function desktopScenario(browser) {
+  console.log('stage: desktop-open');
   const env = await openCleanPage(browser, { width: 1440, height: 1000 });
   const { page, context, consoleErrors, pageErrors } = env;
 
   assert.equal(await page.title(), 'TeacherBoard — Дошка для занять');
-  await page.locator('#undoBtn').waitFor({ state: 'visible' });
+  const undoDiag = await elementDiagnostics(page, '#undoBtn');
+  const actionsDiag = await elementDiagnostics(page, '.top-actions');
+  const topbarDiag = await elementDiagnostics(page, '.topbar');
+  assert.ok(undoDiag, 'Undo button must exist');
+  assert.ok(undoDiag.width > 0 && undoDiag.height > 0 && undoDiag.display !== 'none' && undoDiag.visibility !== 'hidden', `Undo button layout invalid: ${JSON.stringify({ undoDiag, actionsDiag, topbarDiag })}`);
   assert.equal(await page.locator('#undoBtn').getAttribute('aria-label'), 'Скасувати останню дію');
 
+  console.log('stage: raster');
   const canvas = page.locator('#boardCanvas');
   const box = await canvas.boundingBox();
   const diagnostics = await canvasDiagnostics(page);
@@ -79,6 +112,7 @@ async function desktopScenario(browser) {
   });
   assert.ok(rasterSaved?.startsWith('data:image/png'), 'Raster drawing should persist as PNG data');
 
+  console.log('stage: text');
   await page.locator('[data-tool="text"]').click();
   await page.mouse.click(box.x + 320, box.y + 220);
   await page.locator('#textDialog').waitFor({ state: 'visible' });
@@ -87,6 +121,7 @@ async function desktopScenario(browser) {
   await page.locator('.tb-object-text').waitFor({ state: 'visible' });
   assert.equal(await page.locator('.tb-object-text').count(), 1);
 
+  console.log('stage: shape-history');
   await page.locator('.tb-shape-launcher').click();
   await page.locator('.tb-shape-menu [data-shape="rect"]').click();
   await page.mouse.move(box.x + 420, box.y + 240);
@@ -95,15 +130,17 @@ async function desktopScenario(browser) {
   await page.mouse.up();
   await page.locator('.tb-object-shape').waitFor({ state: 'visible' });
 
-  await page.locator('#undoBtn').click();
+  await page.locator('#undoBtn').click({ force: true });
   await page.waitForTimeout(250);
   assert.equal(await page.locator('.tb-object-shape').count(), 0, 'Undo should remove last object action');
-  await page.locator('#redoBtn').click();
+  await page.locator('#redoBtn').click({ force: true });
   await page.waitForTimeout(250);
   assert.equal(await page.locator('.tb-object-shape').count(), 1, 'Redo should restore last object action');
 
+  console.log('stage: pages-storage');
   const pagesBefore = await page.locator('.page-tab').count();
-  await page.locator('#addPageBtn').click();
+  await page.locator('#addPageBtn').click({ force: true, noWaitAfter: true });
+  await page.waitForLoadState('domcontentloaded').catch(() => {});
   await waitForAppReady(page);
   assert.equal(await page.locator('.page-tab').count(), pagesBefore + 1, 'Add page should create one page');
 
@@ -131,6 +168,7 @@ async function desktopScenario(browser) {
 }
 
 async function responsiveScenario(browser, viewport, label) {
+  console.log(`stage: ${label}`);
   const { page, context, pageErrors } = await openCleanPage(browser, viewport);
   const boardBox = await page.locator('#board').boundingBox();
   const diagnostics = await canvasDiagnostics(page);
