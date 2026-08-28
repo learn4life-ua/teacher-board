@@ -15,6 +15,7 @@ async function waitForAutosave(page) {
 
 async function openCleanPage(browser, viewport) {
   const context = await browser.newContext({ viewport });
+  await context.route('https://cdnjs.cloudflare.com/**', route => route.abort());
   const page = await context.newPage();
   const consoleErrors = [];
   const pageErrors = [];
