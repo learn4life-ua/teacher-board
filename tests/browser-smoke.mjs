@@ -14,9 +14,7 @@ async function waitForAppReady(page) {
     hasSelectTool: Boolean(document.querySelector('.tb-select-tool')),
     bodyStart: document.body?.innerText?.slice(0, 500) || ''
   }));
-  if (!diagnostic.hasCanvas || !diagnostic.hasToolbar) {
-    throw new Error(`TeacherBoard DOM not ready: ${JSON.stringify(diagnostic)}`);
-  }
+  if (!diagnostic.hasCanvas || !diagnostic.hasToolbar) throw new Error(`TeacherBoard DOM not ready: ${JSON.stringify(diagnostic)}`);
 }
 
 async function waitForAutosave(page) {
@@ -29,23 +27,7 @@ async function elementDiagnostics(page, selector) {
     if (!el) return null;
     const cs = getComputedStyle(el);
     const r = el.getBoundingClientRect();
-    return {
-      selector,
-      display: cs.display,
-      visibility: cs.visibility,
-      opacity: cs.opacity,
-      overflow: cs.overflow,
-      position: cs.position,
-      width: r.width,
-      height: r.height,
-      x: r.x,
-      y: r.y,
-      right: r.right,
-      bottom: r.bottom,
-      hidden: el.hidden,
-      disabled: el.disabled ?? null,
-      className: el.className
-    };
+    return { selector, display: cs.display, visibility: cs.visibility, opacity: cs.opacity, overflow: cs.overflow, position: cs.position, width: r.width, height: r.height, x: r.x, y: r.y, right: r.right, bottom: r.bottom, hidden: el.hidden, disabled: el.disabled ?? null, className: el.className };
   }, selector);
 }
 
@@ -134,11 +116,26 @@ async function desktopScenario(browser) {
   console.log('stage: shape-history');
   await page.locator('.tb-shape-launcher').click();
   await page.locator('.tb-shape-menu [data-shape="rect"]').click();
+  await page.waitForTimeout(80);
   await page.mouse.move(box.x + 420, box.y + 240);
   await page.mouse.down();
   await page.mouse.move(box.x + 560, box.y + 340, { steps: 4 });
   await page.mouse.up();
-  await page.locator('.tb-object-shape').waitFor({ state: 'visible' });
+  await page.waitForTimeout(200);
+  const shapeState = await page.evaluate(() => {
+    const data = JSON.parse(localStorage.getItem('teacherboard.v1') || '{}');
+    const pageIndex = Number(data.activePage) || 0;
+    return {
+      objects: data.pages?.[pageIndex]?.objects || [],
+      domShapes: document.querySelectorAll('.tb-object-shape').length,
+      preview: Boolean(document.querySelector('.tb-shape-preview')),
+      activeClass: document.querySelector('.toolbar .tool.active')?.className || null,
+      activeDataTool: document.querySelector('.toolbar .tool.active')?.getAttribute('data-tool') || null,
+      bodyClass: document.body.className
+    };
+  });
+  if (!shapeState.objects.some(item => item?.kind === 'shape')) throw new Error(`Shape gesture did not create state object: ${JSON.stringify({ shapeState, pageErrors, consoleErrors })}`);
+  assert.ok(shapeState.domShapes >= 1, `Shape state exists but DOM render missing: ${JSON.stringify({ shapeState, pageErrors, consoleErrors })}`);
 
   await page.locator('#undoBtn').click({ force: true });
   await page.waitForTimeout(250);
@@ -153,6 +150,7 @@ async function desktopScenario(browser) {
   await page.waitForTimeout(150);
   assert.equal(await page.locator('.page-tab').count(), pagesBefore + 1, 'Add page should create one page');
 
+  await page.evaluate(() => globalThis.TeacherBoardStore?.flush?.());
   const persisted = await page.evaluate(async () => {
     const db = await new Promise((resolve, reject) => {
       const req = indexedDB.open('teacherboard', 1);
