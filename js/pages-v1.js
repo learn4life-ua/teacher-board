@@ -25,6 +25,13 @@
     return Math.max(0, Math.min(Number(data.activePage) || 0, len - 1));
   }
 
+  function refresh(index, { load = true } = {}) {
+    const runtime = globalThis.TeacherBoardCoreRuntime;
+    runtime?.renderPages?.();
+    if (load) runtime?.loadPage?.(index);
+    window.dispatchEvent(new CustomEvent('teacherboard:page-changed', { detail: { index } }));
+  }
+
   function ensureMenu() {
     let menu = document.querySelector('.page-context-v1');
     if (menu) return menu;
@@ -44,7 +51,7 @@
     if (!name?.trim()) return;
     data.pages[index].name = name.trim();
     writeData(data);
-    location.reload();
+    refresh(activeIndex(data), { load: false });
   }
 
   function duplicatePage(index) {
@@ -56,12 +63,14 @@
     clone.name = `${clone.name || `Сторінка ${index + 1}`} — копія`;
     data.pages.splice(index + 1, 0, clone);
     data.activePage = index + 1;
-    writeData(data);
 
     const heights = readHeights();
-    heights.splice(index + 1, 0, heights[index] || clone.height || 900);
+    const sourceHeight = heights[index] || data.pages[index]?.height || clone.height || 900;
+    heights.splice(index + 1, 0, sourceHeight);
+    clone.height = sourceHeight;
     writeHeights(heights);
-    location.reload();
+    writeData(data);
+    refresh(data.activePage);
   }
 
   function deletePage(index) {
@@ -73,11 +82,11 @@
     if (!confirm(`Видалити сторінку ${index + 1}?`)) return;
     data.pages.splice(index, 1);
     data.activePage = Math.min(index, data.pages.length - 1);
-    writeData(data);
     const heights = readHeights();
     heights.splice(index, 1);
     writeHeights(heights);
-    location.reload();
+    writeData(data);
+    refresh(data.activePage);
   }
 
   function enhancePageTabs() {
