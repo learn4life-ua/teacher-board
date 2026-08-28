@@ -10,6 +10,7 @@ on:
       - 'js/**'
       - 'css/**'
       - 'tests/browser-smoke.mjs'
+      - 'tests/page-persistence.mjs'
       - '.github/workflows/browser-smoke.yml'
 
 permissions:
@@ -35,6 +36,7 @@ jobs:
         run: |
           set -euo pipefail
           node --check tests/browser-smoke.mjs
+          node --check tests/page-persistence.mjs
           for file in \
             js/state.js \
             js/storage.js \
@@ -73,3 +75,6 @@ jobs:
 
       - name: Run desktop tablet mobile smoke tests
         run: node tests/browser-smoke.mjs
+
+      - name: Run page and persistence regression tests
+        run: node tests/page-persistence.mjs
