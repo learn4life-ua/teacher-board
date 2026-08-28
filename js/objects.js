@@ -99,6 +99,7 @@
   }
 
   globalThis.TeacherBoardObjects = {
-    shapeSvg
+    shapeSvg,
+    renderShapeSvg: shapeSvg
   };
 })();
