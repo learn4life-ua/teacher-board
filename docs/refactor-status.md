@@ -1,6 +1,6 @@
 # TeacherBoard v1 Refactor Status
 
-## Current milestone: P0 implementation complete
+## Current milestone: P0 stabilized, browser smoke passing
 
 Branch: `refactor-v1`
 
@@ -16,16 +16,21 @@ Branch: `refactor-v1`
 - `js/compat.js` has been removed.
 - Shared bounded chronological history now lives in `js/history.js`.
 - `js/history-runtime-v1.js` records raster/background checkpoints and owns Undo/Redo controls and shortcuts.
-- Raster and editable-object changes now use the same shared history stack.
+- Raster and editable-object changes use the same shared history stack.
 - History restore updates storage, editable objects and the raster canvas.
 - Central SVG shape renderer lives in `js/objects.js`.
+- Object renderer compatibility contract is explicit through `renderShapeSvg`.
 - `index.html` no longer loads `js/app.js`, `js/v2.js`, `js/v3.js` or any `fixes-v*` runtime.
+- Obsolete `js/objects-runtime.js` has been removed; the active object runtime is `js/objects-runtime-v2.js`.
 - `js/core-runtime-v1.js` owns raster pen/marker/eraser, raster arrow, page rendering/switching, background, zoom, fullscreen, laser and raster persistence.
 - `js/ui-v1.js` owns pen controls, fit-to-screen, presentation controls and pagebar collapse.
 - `js/pages-v1.js` owns rename, delete, duplicate context actions and page-height extension.
+- Page CRUD no longer reloads the whole application.
+- Page-tab enhancement is idempotent; the previous MutationObserver feedback loop is removed.
 - `js/interaction-bridge-v1.js` owns the insert button, math-symbol dialog entry and math preset buttons.
 - Unified object runtime lives in `js/objects-runtime-v2.js`.
 - Shapes, images, text and curtain use the editable object layer.
+- Existing objects no longer intercept pointer events outside Select mode, so drawing and shape creation can pass over them.
 - Legacy `page.texts` migrate into editable text objects on startup.
 - Text objects can be edited by double-clicking.
 - Curtain is movable and resizable instead of raster-only.
@@ -39,25 +44,41 @@ Branch: `refactor-v1`
 - `js/export-v1.js` composes background, raster and editable objects for PNG/PDF.
 - `js/accessibility-v1.js` adds accessible labels and pressed states.
 - `css/accessibility-v1.css` adds visible focus indicators, reduced-motion support and larger touch hit areas.
+- Browser zoom is no longer disabled by `maximum-scale=1`.
+- GitHub Actions browser smoke workflow runs on `refactor-v1` and cancels stale runs.
+
+### Browser smoke verification
+
+Run `#120` (`a9444fe5155dcbbc5dd3280b73388719cbcbdbb5`) passed in Chromium after the interaction fixes.
+
+The automated smoke scenario currently verifies:
+
+- desktop application startup;
+- usable canvas dimensions;
+- raster drawing and persistence;
+- editable text creation;
+- shape creation over an existing text object;
+- object undo and redo;
+- live add-page behavior without reload;
+- durable document presence in IndexedDB;
+- tablet board/toolbar availability;
+- mobile board/toolbar availability;
+- absence of browser page errors in tested responsive scenarios.
 
 ### Still transitional, but outside P0 behavior
 
 - Active modules still use synchronous `localStorage` reads/writes internally. `store-v1.js` turns those writes into IndexedDB write-through persistence. A later cleanup can replace direct calls with `TeacherBoardStore` methods.
 - CSS is still layered as `style.css`, `compact.css`, `v2.css`, `v3.css`, `objects-v2.css`, `mobile.css`, `accessibility-v1.css`.
 - UI icons are still mixed text symbols rather than one SVG icon system.
-- Old JS files remain in the repository as inactive reference until parity verification is complete; they are not loaded by `index.html`.
-
-## Verification status
-
-P0 implementation is complete on `refactor-v1`, but browser verification is still required before merging into `main`.
-
-A previous local `node --check` attempt could not be completed because the execution environment could not resolve `github.com` to clone the branch. This was an environment/network limitation, not a passed syntax check.
+- Some old inactive JS files remain in the repository as reference; they are not loaded by `index.html`.
 
 ## Verification matrix before merge
 
+Automated smoke coverage is marked `[x]`. Items that still require broader automated or manual verification remain `[ ]`.
+
 ### Drawing
 
-- [ ] Pen draws and persists.
+- [x] Pen draws and persists.
 - [ ] Marker draws and persists.
 - [ ] Eraser removes raster strokes.
 - [ ] Raster arrow draws and persists.
@@ -67,23 +88,24 @@ A previous local `node --check` attempt could not be completed because the execu
 
 ### Editable objects
 
-- [ ] Rectangle can be created.
+- [x] Rectangle can be created.
 - [ ] Circle can be created.
 - [ ] Triangle can be created.
 - [ ] Other geometry shapes render correctly.
 - [ ] Number line −5…5 has one positive-direction arrow.
 - [ ] Number line −10…10 remains readable on mobile.
 - [ ] Coordinate axes render correct arrowheads.
-- [ ] Object can be selected.
+- [x] Object can enter Select mode after creation.
 - [ ] Object can be moved.
 - [ ] Object can be resized.
 - [ ] Object can be deleted with handle.
-- [ ] Undo/redo works for create, move, resize, edit and delete.
+- [x] Undo/redo works for object creation.
+- [ ] Undo/redo works for move, resize, edit and delete.
 
 ### Text
 
 - [ ] Existing legacy text migrates once without duplication.
-- [ ] New text is created as an editable object.
+- [x] New text is created as an editable object.
 - [ ] Double-click edits text.
 - [ ] Text can be moved and resized.
 - [ ] Text persists after raster drawing and reload.
@@ -106,7 +128,7 @@ A previous local `node --check` attempt could not be completed because the execu
 
 - [ ] Switching pages shows the correct raster and editable objects.
 - [ ] Duplicating a page duplicates its raster, objects and height.
-- [ ] Adding a page starts clean.
+- [x] Adding a page starts clean and updates without full-page reload.
 - [ ] Deleting a page does not shift wrong objects onto another page.
 - [ ] Renaming a page does not lose objects.
 - [ ] Extended page height keeps raster/object coordinates correct.
@@ -123,25 +145,28 @@ A previous local `node --check` attempt could not be completed because the execu
 - [ ] Reload preserves pages and objects.
 - [ ] Legacy localStorage data migrates without loss.
 - [ ] Migrated legacy state is persisted into IndexedDB.
-- [ ] New writes reach IndexedDB through `store-v1.js`.
+- [x] New document state reaches IndexedDB.
 - [ ] App still works when IndexedDB is unavailable, using cache fallback.
 
 ### Responsive / accessibility
 
-- [ ] Desktop toolbar remains usable.
-- [ ] Tablet toolbar remains usable.
-- [ ] Phone menu remains usable.
-- [ ] Shape menu fits viewport.
+- [x] Desktop toolbar remains usable in smoke scenario.
+- [x] Tablet toolbar remains usable in smoke scenario.
+- [x] Phone toolbar remains usable in smoke scenario.
+- [ ] Phone overflow menu actions are fully verified.
+- [ ] Shape menu fits all target viewports.
 - [ ] Resize/delete handles are usable by touch.
-- [ ] Focus indicators are visible.
-- [ ] Icon buttons have accessible names.
-- [ ] Keyboard navigation is usable.
-- [ ] Reduced-motion preference is respected.
+- [ ] Focus indicators are visually verified.
+- [x] Core icon buttons receive accessible names.
+- [ ] Keyboard navigation is fully verified.
+- [x] Browser page zoom is allowed.
+- [ ] Reduced-motion preference is visually verified.
 
 ## Next phase
 
-1. Perform browser verification against this matrix.
-2. Fix any regressions found during verification.
+1. Expand browser tests from smoke coverage to the remaining v1 verification matrix.
+2. Fix regressions discovered by those tests.
 3. Consolidate CSS layers.
 4. Replace text-symbol UI icons with one SVG icon system.
-5. Open a merge PR only after verification passes.
+5. Perform final desktop/tablet/mobile visual review.
+6. Open a merge PR only after verification is broad enough for v1.
