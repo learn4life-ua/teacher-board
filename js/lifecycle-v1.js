@@ -44,8 +44,16 @@
       background: 'clean',
       image: null,
       texts: [],
-      objects: []
+      objects: [],
+      height: 900
     };
+  }
+
+  function refreshActivePage(index) {
+    const runtime = globalThis.TeacherBoardCoreRuntime;
+    runtime?.renderPages?.();
+    runtime?.loadPage?.(index);
+    window.dispatchEvent(new CustomEvent('teacherboard:page-changed', { detail: { index } }));
   }
 
   function clearVisibleBoard() {
@@ -87,7 +95,7 @@
     heights.push(900);
     writeHeights(heights);
     writeData(data);
-    location.reload();
+    refreshActivePage(data.activePage);
   }
 
   function duplicateCurrentPage(event) {
@@ -104,10 +112,10 @@
     data.activePage = index + 1;
 
     const heights = readJson(HEIGHTS_KEY, []);
-    heights.splice(index + 1, 0, heights[index] || canvas?.height || 900);
+    heights.splice(index + 1, 0, heights[index] || source.height || canvas?.height || 900);
     writeHeights(heights);
     writeData(data);
-    location.reload();
+    refreshActivePage(data.activePage);
   }
 
   function bind() {
