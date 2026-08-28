@@ -95,6 +95,8 @@
   }
 
   function saveRasterNow() {
+    // Never synthesize a new document during unload/recovery when the cache is absent.
+    if (!localStorage.getItem(STORAGE_KEY)) return;
     const data = readData();
     const index = activeIndex(data);
     const page = data.pages[index];
