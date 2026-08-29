@@ -16,6 +16,8 @@ on:
       - 'tests/raster-regression.mjs'
       - 'tests/math-regression.mjs'
       - 'tests/accessibility-regression.mjs'
+      - 'tests/page-lifecycle-regression.mjs'
+      - 'tests/storage-fallback-regression.mjs'
       - '.github/workflows/browser-smoke.yml'
 
 permissions:
@@ -47,6 +49,8 @@ jobs:
           node --check tests/raster-regression.mjs
           node --check tests/math-regression.mjs
           node --check tests/accessibility-regression.mjs
+          node --check tests/page-lifecycle-regression.mjs
+          node --check tests/storage-fallback-regression.mjs
           for file in \
             js/state.js \
             js/storage.js \
@@ -103,3 +107,9 @@ jobs:
 
       - name: Run accessibility regression tests
         run: node tests/accessibility-regression.mjs
+
+      - name: Run page lifecycle regression tests
+        run: node tests/page-lifecycle-regression.mjs
+
+      - name: Run storage fallback regression tests
+        run: node tests/storage-fallback-regression.mjs
