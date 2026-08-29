@@ -10,6 +10,14 @@ textarea:focus:not(:focus-visible){
   outline:none;
 }
 
+.dialog-label{
+  display:block;
+  margin:0 0 6px;
+  font-size:12px;
+  font-weight:600;
+  color:var(--text);
+}
+
 .tool[aria-pressed="true"],
 #backgroundButtons button[aria-pressed="true"]{
   border-color:#87a99c;
