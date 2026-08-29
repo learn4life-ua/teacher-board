@@ -101,10 +101,11 @@
       pop=document.createElement('div');
       pop.className='tb-mobile-menu tb-mobile-pen-pop';
       pop.style.top='62px';
+      pop.hidden=true;
       pop.setAttribute('role','dialog');
       pop.setAttribute('aria-label','Колір і товщина лінії');
       const colors=['#245d55','#1f2c29','#2f5f96','#a44f4a','#76528c','#c79a3b'];
-      pop.innerHTML=`<div style="display:flex;gap:8px;flex-wrap:wrap;padding:8px">${colors.map(c=>`<button type="button" data-color="${c}" aria-label="Вибрати колір ${c}" style="width:38px;height:38px;min-height:38px;border-radius:50%;background:${c};border:2px solid #fff;box-shadow:0 0 0 1px #ccd7d1;padding:0"></button>`).join('')}<input id="tbMobileColor" type="color" value="#245d55" aria-label="Інший колір" style="width:38px;height:38px;border:0;background:none;padding:0"><select id="tbMobileWidth" aria-label="Товщина лінії" style="height:38px;border:1px solid #d9e3dd;border-radius:9px"><option value="2">2 px</option><option value="4" selected>4 px</option><option value="6">6 px</option><option value="10">10 px</option></select><button type="button" class="tb-mobile-pen-close" style="height:38px;border:1px solid #d9e3dd;border-radius:9px;background:#fff;padding:0 12px">Готово</button></div>`;
+      pop.innerHTML=`<div style="display:flex;gap:8px;flex-wrap:wrap;padding:8px">${colors.map(c=>`<button type="button" data-color="${c}" aria-label="Вибрати колір ${c}" style="width:44px;height:44px;min-height:44px;border-radius:50%;background:${c};border:2px solid #fff;box-shadow:0 0 0 1px #ccd7d1;padding:0"></button>`).join('')}<input id="tbMobileColor" type="color" value="#245d55" aria-label="Інший колір" style="width:44px;height:44px;border:0;background:none;padding:0"><select id="tbMobileWidth" aria-label="Товщина лінії" style="height:44px;border:1px solid #d9e3dd;border-radius:9px"><option value="2">2 px</option><option value="4" selected>4 px</option><option value="6">6 px</option><option value="10">10 px</option></select><button type="button" class="tb-mobile-pen-close" style="height:44px;min-height:44px;border:1px solid #d9e3dd;border-radius:9px;background:#fff;padding:0 12px">Готово</button></div>`;
       document.body.appendChild(pop);
       pop.querySelectorAll('[data-color]').forEach(b=>b.addEventListener('click',()=>setColor(b.dataset.color)));
       pop.querySelector('#tbMobileColor').addEventListener('input',e=>setColor(e.target.value));
