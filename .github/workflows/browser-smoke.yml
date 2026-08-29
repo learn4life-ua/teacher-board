@@ -15,6 +15,7 @@ on:
       - 'tests/export-regression.mjs'
       - 'tests/raster-regression.mjs'
       - 'tests/math-regression.mjs'
+      - 'tests/accessibility-regression.mjs'
       - '.github/workflows/browser-smoke.yml'
 
 permissions:
@@ -45,6 +46,7 @@ jobs:
           node --check tests/export-regression.mjs
           node --check tests/raster-regression.mjs
           node --check tests/math-regression.mjs
+          node --check tests/accessibility-regression.mjs
           for file in \
             js/state.js \
             js/storage.js \
@@ -98,3 +100,6 @@ jobs:
 
       - name: Run math tools regression tests
         run: node tests/math-regression.mjs
+
+      - name: Run accessibility regression tests
+        run: node tests/accessibility-regression.mjs
