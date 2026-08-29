@@ -78,7 +78,7 @@ async function desktopScenario(browser) {
   const env = await openCleanPage(browser, { width: 1440, height: 1000 });
   const { page, context, consoleErrors, pageErrors } = env;
 
-  assert.equal(await page.title(), 'TeacherBoard — Дошка для занять');
+  assert.equal(await page.title(), 'TeacherBoard - Дошка для занять');
   const undoDiag = await elementDiagnostics(page, '#undoBtn');
   const actionsDiag = await elementDiagnostics(page, '.top-actions');
   const topbarDiag = await elementDiagnostics(page, '.topbar');
