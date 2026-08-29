@@ -32,18 +32,6 @@
   function writeData(data) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     window.dispatchEvent(new CustomEvent('teacherboard:storage-updated', { detail: data }));
-    mirrorIndexedDb(data);
-  }
-
-  async function mirrorIndexedDb(data) {
-    try {
-      const storage = globalThis.TeacherBoardStorage;
-      const core = globalThis.TeacherBoardCore;
-      if (!storage?.saveDocument || !core?.normalizeDocument) return;
-      await storage.saveDocument(core.normalizeDocument(data, readHeights()));
-    } catch (error) {
-      console.warn('[TeacherBoard] IndexedDB mirror failed.', error);
-    }
   }
 
   function readHeights() {
