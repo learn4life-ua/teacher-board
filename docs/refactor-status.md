@@ -1,6 +1,6 @@
 # TeacherBoard v1 Refactor Status
 
-## Current milestone: implementation stabilized, full automated browser matrix passing
+## Current milestone: merge candidate ready for PR review
 
 Branch: `refactor-v1`
 
@@ -38,6 +38,7 @@ Active stylesheets are now:
 3. `css/mobile.css`
 4. `css/accessibility-v1.css`
 5. `css/icons-v1.css`
+6. `css/layout-fixes-v1.css`
 
 The superseded `style.css`, `compact.css`, `v2.css` and `v3.css` files have been removed from the branch.
 
@@ -58,13 +59,14 @@ The refactor fixed production defects found through Chromium regression testing,
 - mobile overflow accessibility and keyboard gaps;
 - the mobile color/thickness panel requiring a second activation;
 - object controls intercepting drawing gestures in non-select modes;
-- browser zoom being blocked by the viewport configuration.
+- browser zoom being blocked by the viewport configuration;
+- desktop topbar compression hiding the PDF action at 1440 px. The PDF action now collapses to an accessible icon at the squeeze breakpoint instead of becoming partially clipped.
 
 ## Automated browser verification
 
-Run `#170` on commit `a218720ced3719ab13dc7930ee50281dc02f1d80` passed completely in Chromium after CSS consolidation, SVG icon adoption, object-keyboard accessibility work and the Playwright test dependency update.
+Run `#174` on commit `25d6f1ff38073d5d575407117acec15b9e07d84e` passed completely in Chromium after the final responsive topbar fix.
 
-The workflow currently runs eleven browser suites:
+The workflow runs eleven functional/accessibility browser suites plus one responsive visual-QA capture:
 
 1. `tests/browser-smoke.mjs`
 2. `tests/page-persistence.mjs`
@@ -77,8 +79,9 @@ The workflow currently runs eleven browser suites:
 9. `tests/storage-fallback-regression.mjs`
 10. `tests/icons-regression.mjs`
 11. `tests/advanced-interaction-regression.mjs`
+12. `tests/visual-qa.mjs`
 
-The CI test dependency now uses Playwright `1.62.1`.
+The CI test dependency uses Playwright `1.62.1`.
 
 ## Verified behavior
 
@@ -173,12 +176,28 @@ The CI test dependency now uses Playwright `1.62.1`.
 - [x] `prefers-reduced-motion: reduce` suppresses tested transitions.
 - [x] Interface controls use the unified SVG icon layer in desktop and mobile tests.
 
-## Remaining work before merge
+## Visual QA
 
-The automated functional/accessibility matrix is now broad enough for a v1 merge candidate. Remaining work is primarily release-quality review rather than P0 stabilization:
+Run `#174` captures full-page screenshots and layout metrics for:
 
-- perform a final visual screenshot review at desktop, tablet and phone widths after the CSS/icon cleanup;
-- inspect any visual regressions that automated behavioral assertions cannot detect;
-- optionally rename the remaining `objects-runtime-v2.js` / `objects-v2.css` filenames to v1 naming in a mechanical follow-up;
-- direct synchronous `localStorage` reads/writes remain a transitional internal implementation detail behind `store-v1.js`; replacing them with store methods can be a later architectural cleanup rather than a v1 blocker;
-- open a PR only after visual QA; do not merge directly into `main` during this refactor.
+- desktop `1440×1000`;
+- tablet `900×1100`;
+- phone `390×844`.
+
+The visual-QA assertions confirm that the document does not develop unintended horizontal overflow, the toolbar/topbar/pagebar remain visible and the board retains a usable area in all three viewports.
+
+The screenshots were manually inspected after the automated run. A desktop topbar issue was found during the first pass: `Заняття PDF` became partially hidden as the action row compressed. The responsive action layout was corrected and the final screenshot now shows the PDF action as a clean icon-only control at 1440 px, with its accessible name retained. Tablet and phone layouts remained stable after the fix.
+
+The run uploads a `teacherboard-visual-qa` artifact containing PNG screenshots and JSON layout metrics for 14 days.
+
+## Merge readiness
+
+This branch is now a v1 merge candidate for review.
+
+Non-blocking follow-up work after v1 may include:
+
+- renaming the remaining `objects-runtime-v2.js` / `objects-v2.css` filenames to v1 naming in a mechanical cleanup;
+- replacing transitional direct synchronous `localStorage` reads/writes with store methods;
+- further internal deduplication inside `base-v1.css` now that the cascade has been consolidated and behavior is protected by regression tests.
+
+Do not merge directly into `main` without reviewing the PR diff and checks.
