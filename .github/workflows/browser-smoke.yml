@@ -66,6 +66,7 @@ jobs:
             js/core-runtime-v1.js \
             js/history-runtime-v1.js \
             js/ui-v1.js \
+            js/after-core-v1.js \
             js/pages-v1.js \
             js/objects-runtime-v2.js \
             js/lifecycle-v1.js \
