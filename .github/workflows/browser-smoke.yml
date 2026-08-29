@@ -19,6 +19,7 @@ on:
       - 'tests/page-lifecycle-regression.mjs'
       - 'tests/storage-fallback-regression.mjs'
       - 'tests/icons-regression.mjs'
+      - 'tests/advanced-interaction-regression.mjs'
       - '.github/workflows/browser-smoke.yml'
 
 permissions:
@@ -53,6 +54,7 @@ jobs:
           node --check tests/page-lifecycle-regression.mjs
           node --check tests/storage-fallback-regression.mjs
           node --check tests/icons-regression.mjs
+          node --check tests/advanced-interaction-regression.mjs
           for file in \
             js/state.js \
             js/storage.js \
@@ -69,6 +71,7 @@ jobs:
             js/interaction-bridge-v1.js \
             js/mobile.js \
             js/accessibility-v1.js \
+            js/object-keyboard-v1.js \
             js/icons-v1.js; do
             echo "Checking $file"
             node --check "$file"
@@ -119,3 +122,6 @@ jobs:
 
       - name: Run SVG icon regression tests
         run: node tests/icons-regression.mjs
+
+      - name: Run advanced interaction regression tests
+        run: node tests/advanced-interaction-regression.mjs
