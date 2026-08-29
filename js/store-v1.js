@@ -1,0 +1,196 @@
+(() => {
+  'use strict';
+
+  const DOCUMENT_KEY = 'teacherboard.v1';
+  const HEIGHTS_KEY = 'teacherboard.pageHeights.v1';
+  const HYDRATED_KEY = 'teacherboard.store.hydrated.v1';
+  const nativeSetItem = Storage.prototype.setItem;
+  const nativeRemoveItem = Storage.prototype.removeItem;
+  let suppressMirror = false;
+
+  function parse(value, fallback = null) {
+    try { return JSON.parse(value); }
+    catch { return fallback; }
+  }
+
+  function clone(value) {
+    if (typeof globalThis.structuredClone === 'function') return globalThis.structuredClone(value);
+    return JSON.parse(JSON.stringify(value));
+  }
+
+  function readCache() {
+    return parse(localStorage.getItem(DOCUMENT_KEY) || 'null', null);
+  }
+
+  function readHeights() {
+    const value = parse(localStorage.getItem(HEIGHTS_KEY) || '[]', []);
+    return Array.isArray(value) ? value : [];
+  }
+
+  function toRuntimeObject(item = {}) {
+    const { type, width, height, kind: legacyKind, w: legacyW, h: legacyH, ...rest } = item;
+    const kind = type || legacyKind || 'shape';
+    return {
+      ...rest,
+      kind,
+      w: Number(width ?? legacyW) || (kind === 'text' ? 520 : kind === 'image' ? 480 : kind === 'curtain' ? 420 : 120),
+      h: Number(height ?? legacyH) || (kind === 'text' ? 90 : kind === 'image' ? 320 : kind === 'curtain' ? 180 : 90)
+    };
+  }
+
+  function toRuntimeCache(documentState) {
+    const core = globalThis.TeacherBoardCore;
+    const normalized = core?.normalizeDocument
+      ? core.normalizeDocument(documentState || core.createBlankDocument(), readHeights())
+      : clone(documentState);
+
+    if (!normalized?.pages) return normalized;
+
+    return {
+      ...normalized,
+      pages: normalized.pages.map(page => {
+        const { raster, items, image: legacyImage, objects: legacyObjects, texts: legacyTexts, ...runtimePage } = page;
+        const sourceItems = Array.isArray(items)
+          ? items
+          : Array.isArray(legacyObjects)
+            ? legacyObjects
+            : [];
+        return {
+          ...runtimePage,
+          image: raster?.image ?? legacyImage ?? null,
+          texts: Array.isArray(legacyTexts) ? legacyTexts : [],
+          objects: sourceItems.map(toRuntimeObject)
+        };
+      })
+    };
+  }
+
+  function writeCache(documentState) {
+    const runtimeDocument = toRuntimeCache(documentState);
+    suppressMirror = true;
+    try {
+      nativeSetItem.call(localStorage, DOCUMENT_KEY, JSON.stringify(runtimeDocument));
+    } finally {
+      suppressMirror = false;
+    }
+    return runtimeDocument;
+  }
+
+  function writeHeightsCache(heights) {
+    suppressMirror = true;
+    try {
+      nativeSetItem.call(localStorage, HEIGHTS_KEY, JSON.stringify(Array.isArray(heights) ? heights : []));
+    } finally {
+      suppressMirror = false;
+    }
+  }
+
+  async function persistDocument(raw) {
+    const storage = globalThis.TeacherBoardStorage;
+    const core = globalThis.TeacherBoardCore;
+    if (!storage?.saveDocument || !core?.normalizeDocument) return raw;
+    const normalized = core.normalizeDocument(raw || core.createBlankDocument(), readHeights());
+    await storage.saveDocument(normalized);
+    return normalized;
+  }
+
+  let writeQueue = Promise.resolve();
+  function enqueuePersist(raw) {
+    const snapshot = clone(raw);
+    writeQueue = writeQueue
+      .catch(() => {})
+      .then(() => persistDocument(snapshot))
+      .catch(error => console.warn('[TeacherBoard] IndexedDB save failed; local cache retained.', error));
+    return writeQueue;
+  }
+
+  function publish(raw, source = 'cache') {
+    window.dispatchEvent(new CustomEvent('teacherboard:storage-updated', {
+      detail: { document: raw, source }
+    }));
+  }
+
+  function setDocument(raw, { source = 'store' } = {}) {
+    if (!raw || typeof raw !== 'object') return;
+    const runtimeDocument = writeCache(raw);
+    enqueuePersist(runtimeDocument);
+    publish(runtimeDocument, source);
+    document.getElementById('autosaveState')?.replaceChildren(document.createTextNode('Збережено'));
+  }
+
+  function setHeights(heights) {
+    writeHeightsCache(heights);
+    const current = readCache();
+    if (current) enqueuePersist(current);
+    window.dispatchEvent(new CustomEvent('teacherboard:heights-updated', { detail: readHeights() }));
+  }
+
+  async function hydrateFromIndexedDb() {
+    const storage = globalThis.TeacherBoardStorage;
+    if (!storage?.loadDocument) return { source: 'cache', document: readCache() };
+
+    try {
+      const stored = await storage.loadDocument();
+      if (!stored) return { source: 'cache', document: readCache() };
+
+      const cached = readCache();
+      const storedJson = JSON.stringify(stored);
+      const cachedNormalized = cached && globalThis.TeacherBoardCore?.normalizeDocument
+        ? globalThis.TeacherBoardCore.normalizeDocument(cached, readHeights())
+        : cached;
+      const cachedJson = cachedNormalized ? JSON.stringify(cachedNormalized) : '';
+
+      // loadDocument may have returned migrated legacy data when IndexedDB was empty.
+      // Persist it explicitly so IndexedDB becomes the durable source immediately.
+      const persisted = await persistDocument(stored);
+      const runtimeDocument = writeCache(persisted || stored);
+      nativeSetItem.call(sessionStorage, HYDRATED_KEY, '1');
+      publish(runtimeDocument, 'indexeddb');
+
+      return {
+        source: 'indexeddb',
+        document: runtimeDocument,
+        changed: storedJson !== cachedJson
+      };
+    } catch (error) {
+      console.warn('[TeacherBoard] IndexedDB hydration failed; using local cache.', error);
+      return { source: 'cache', document: readCache(), error };
+    }
+  }
+
+  const ready = hydrateFromIndexedDb();
+
+  Storage.prototype.setItem = function teacherBoardStoreSetItem(key, value) {
+    if (suppressMirror || this !== localStorage || (key !== DOCUMENT_KEY && key !== HEIGHTS_KEY)) {
+      return nativeSetItem.call(this, key, value);
+    }
+
+    const result = nativeSetItem.call(this, key, value);
+    if (key === DOCUMENT_KEY) {
+      const parsed = parse(String(value), null);
+      if (parsed) {
+        enqueuePersist(parsed);
+        publish(parsed, 'local-cache-write-through');
+      }
+    } else {
+      const current = readCache();
+      if (current) enqueuePersist(current);
+      window.dispatchEvent(new CustomEvent('teacherboard:heights-updated', { detail: readHeights() }));
+    }
+    return result;
+  };
+
+  globalThis.TeacherBoardStore = {
+    ready,
+    getDocument: readCache,
+    setDocument,
+    getHeights: readHeights,
+    setHeights,
+    flush: () => writeQueue,
+    constants: { DOCUMENT_KEY, HEIGHTS_KEY },
+    restoreNativeStorage() {
+      Storage.prototype.setItem = nativeSetItem;
+      Storage.prototype.removeItem = nativeRemoveItem;
+    }
+  };
+})();

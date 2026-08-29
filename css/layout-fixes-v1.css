@@ -1,0 +1,21 @@
+.top-actions > button,
+.view-actions > button,
+.top-actions > .pen-controls{
+  flex:0 0 auto;
+}
+
+.top-actions .action-btn{
+  white-space:nowrap;
+}
+
+@media (max-width:1500px){
+  #saveLessonPdfBtn{
+    width:40px;
+    min-width:40px;
+    padding:0;
+  }
+
+  #saveLessonPdfBtn .tb-icon-label{
+    display:none;
+  }
+}

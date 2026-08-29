@@ -1,7 +1,34 @@
-name: Browser Smoke TeacherBoard Next
+name: Browser Smoke TeacherBoard Refactor
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - refactor-v1
+    paths:
+      - 'index.html'
+      - 'js/**'
+      - 'css/**'
+      - 'tests/browser-smoke.mjs'
+      - 'tests/page-persistence.mjs'
+      - 'tests/content-regression.mjs'
+      - 'tests/export-regression.mjs'
+      - 'tests/raster-regression.mjs'
+      - 'tests/math-regression.mjs'
+      - 'tests/accessibility-regression.mjs'
+      - 'tests/page-lifecycle-regression.mjs'
+      - 'tests/storage-fallback-regression.mjs'
+      - 'tests/icons-regression.mjs'
+      - 'tests/advanced-interaction-regression.mjs'
+      - 'tests/visual-qa.mjs'
+      - '.github/workflows/browser-smoke.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: teacherboard-refactor-browser-smoke
+  cancel-in-progress: true
 
 jobs:
   browser-smoke:
@@ -9,33 +36,107 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Cache Playwright Chromium
-        id: playwright-cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-1.55.0-chromium
-      - name: Install Playwright package
+
+      - name: Check active JavaScript syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check tests/browser-smoke.mjs
+          node --check tests/page-persistence.mjs
+          node --check tests/content-regression.mjs
+          node --check tests/export-regression.mjs
+          node --check tests/raster-regression.mjs
+          node --check tests/math-regression.mjs
+          node --check tests/accessibility-regression.mjs
+          node --check tests/page-lifecycle-regression.mjs
+          node --check tests/storage-fallback-regression.mjs
+          node --check tests/icons-regression.mjs
+          node --check tests/advanced-interaction-regression.mjs
+          node --check tests/visual-qa.mjs
+          for file in \
+            js/state.js \
+            js/storage.js \
+            js/store-v1.js \
+            js/history.js \
+            js/objects.js \
+            js/core-runtime-v1.js \
+            js/history-runtime-v1.js \
+            js/ui-v1.js \
+            js/after-core-v1.js \
+            js/pages-v1.js \
+            js/objects-runtime-v2.js \
+            js/lifecycle-v1.js \
+            js/export-v1.js \
+            js/interaction-bridge-v1.js \
+            js/mobile.js \
+            js/accessibility-v1.js \
+            js/object-keyboard-v1.js \
+            js/icons-v1.js; do
+            echo "Checking $file"
+            node --check "$file"
+          done
+
+      - name: Install Playwright
         run: |
           npm init -y >/dev/null 2>&1
-          npm install --no-save playwright@1.55.0
-      - name: Install Chromium system dependencies
-        run: npx playwright install-deps chromium
-      - name: Install Chromium browser
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: npx playwright install chromium
+          npm install --no-save playwright@1.62.1
+          npx playwright install --with-deps chromium
+
       - name: Start static server
         run: |
           python3 -m http.server 4173 >/tmp/teacherboard-http.log 2>&1 &
-          echo $! > /tmp/teacherboard-http.pid
           for i in {1..20}; do
-            curl -fsS http://127.0.0.1:4173/preview.html >/dev/null && exit 0
+            curl -fsS http://127.0.0.1:4173/index.html >/dev/null && exit 0
             sleep 1
           done
           cat /tmp/teacherboard-http.log
           exit 1
-      - name: Run desktop/tablet/android smoke tests
+
+      - name: Run desktop tablet mobile smoke tests
         run: node tests/browser-smoke.mjs
+
+      - name: Run page and persistence regression tests
+        run: node tests/page-persistence.mjs
+
+      - name: Run content and legacy migration regression tests
+        run: node tests/content-regression.mjs
+
+      - name: Run export regression tests
+        run: node tests/export-regression.mjs
+
+      - name: Run raster tool regression tests
+        run: node tests/raster-regression.mjs
+
+      - name: Run math tools regression tests
+        run: node tests/math-regression.mjs
+
+      - name: Run accessibility regression tests
+        run: node tests/accessibility-regression.mjs
+
+      - name: Run page lifecycle regression tests
+        run: node tests/page-lifecycle-regression.mjs
+
+      - name: Run storage fallback regression tests
+        run: node tests/storage-fallback-regression.mjs
+
+      - name: Run SVG icon regression tests
+        run: node tests/icons-regression.mjs
+
+      - name: Run advanced interaction regression tests
+        run: node tests/advanced-interaction-regression.mjs
+
+      - name: Capture responsive visual QA
+        run: node tests/visual-qa.mjs
+
+      - name: Upload visual QA artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: teacherboard-visual-qa
+          path: artifacts/visual-qa
+          if-no-files-found: warn
+          retention-days: 14

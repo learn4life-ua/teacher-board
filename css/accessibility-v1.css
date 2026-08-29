@@ -1,0 +1,61 @@
+:where(button, input, select, textarea, [tabindex]):focus-visible{
+  outline:3px solid #245d55;
+  outline-offset:2px;
+}
+
+button:focus:not(:focus-visible),
+input:focus:not(:focus-visible),
+select:focus:not(:focus-visible),
+textarea:focus:not(:focus-visible){
+  outline:none;
+}
+
+.dialog-label{
+  display:block;
+  margin:0 0 6px;
+  font-size:12px;
+  font-weight:600;
+  color:var(--text);
+}
+
+.tool[aria-pressed="true"],
+#backgroundButtons button[aria-pressed="true"]{
+  border-color:#87a99c;
+}
+
+.tb-delete-handle,
+.tb-resize-handle{
+  position:absolute;
+}
+
+.tb-delete-handle::before,
+.tb-resize-handle::before{
+  content:"";
+  position:absolute;
+  inset:-10px;
+}
+
+@media (max-width:680px){
+  .tb-delete-handle::before,
+  .tb-resize-handle::before{
+    inset:-12px;
+  }
+
+  .tb-shape-menu button,
+  .tb-mobile-menu button,
+  .tool,
+  .icon-btn,
+  .action-btn,
+  .add-page{
+    min-height:44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{
+    scroll-behavior:auto!important;
+    transition-duration:.01ms!important;
+    animation-duration:.01ms!important;
+    animation-iteration-count:1!important;
+  }
+}

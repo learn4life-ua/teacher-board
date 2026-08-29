@@ -23,7 +23,7 @@
   .view-actions #zoomOutBtn,.view-actions #zoomInBtn,.view-actions .zoom-label{display:none!important}
   #fitBoardBtn,#fullscreenBtn,#mathToggleBtn{display:inline-flex!important}
 
-  .tb-mobile-more{display:inline-grid;place-items:center;width:42px;height:42px;border:1px solid var(--border);border-radius:11px;background:#fff;color:var(--text);font-size:22px;flex:0 0 auto}
+  .tb-mobile-more{display:inline-grid;place-items:center;width:44px;height:44px;min-width:44px;min-height:44px;border:1px solid var(--border);border-radius:11px;background:#fff;color:var(--text);font-size:22px;flex:0 0 auto}
   .tb-mobile-menu{position:fixed;right:8px;top:62px;z-index:1200;width:min(250px,calc(100vw - 16px));padding:8px;border:1px solid var(--border);border-radius:14px;background:#fff;box-shadow:0 16px 45px rgba(31,44,41,.2)}
   .tb-mobile-menu[hidden]{display:none}
   .tb-mobile-menu button{display:flex;width:100%;min-height:42px;align-items:center;gap:8px;border:0;border-radius:9px;background:transparent;padding:8px 10px;color:var(--text);text-align:left}
@@ -56,7 +56,7 @@
 
   .tb-shape-menu{left:62px!important;right:8px!important;top:68px!important;width:auto!important;max-height:calc(100dvh - 130px)!important}
   .tb-shape-grid{grid-template-columns:1fr 1fr!important}
-  .tb-shape-menu button{min-height:42px!important}
+  .tb-shape-menu button{min-height:44px!important}
 
   .tb-object-handle{width:22px!important;height:22px!important}
   .tb-resize-handle{right:-13px!important;bottom:-13px!important}
@@ -70,7 +70,7 @@
   .brand{flex-basis:44px!important;min-width:44px!important}.brand-mark{width:38px!important;height:38px!important}
   .workspace,.workspace.math-closed{grid-template-columns:52px minmax(0,1fr) 0!important}
   .tool{width:44px!important}.toolbar{width:52px!important}
-  .tb-mobile-more,.icon-btn{width:40px!important}
+  .tb-mobile-more,.icon-btn{width:44px!important;min-width:44px!important}
   .tb-shape-menu{left:56px!important}
   .tb-selected-properties{left:56px!important}
 }
