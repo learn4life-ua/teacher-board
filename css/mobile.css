@@ -56,7 +56,7 @@
 
   .tb-shape-menu{left:62px!important;right:8px!important;top:68px!important;width:auto!important;max-height:calc(100dvh - 130px)!important}
   .tb-shape-grid{grid-template-columns:1fr 1fr!important}
-  .tb-shape-menu button{min-height:42px!important}
+  .tb-shape-menu button{min-height:44px!important}
 
   .tb-object-handle{width:22px!important;height:22px!important}
   .tb-resize-handle{right:-13px!important;bottom:-13px!important}
