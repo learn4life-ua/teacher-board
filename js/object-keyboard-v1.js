@@ -38,8 +38,13 @@
     const maxX = Math.max(0, 1600 - (Number(object.w) || 120));
     const pageHeight = Number(page.height) || Number(document.getElementById('boardCanvas')?.height) || 900;
     const maxY = Math.max(0, pageHeight - (Number(object.h) || 90));
-    object.x = Math.max(0, Math.min(maxX, (Number(object.x) || 0) + dx));
-    object.y = Math.max(0, Math.min(maxY, (Number(object.y) || 0) + dy));
+    const nextX = Math.max(0, Math.min(maxX, (Number(object.x) || 0) + dx));
+    const nextY = Math.max(0, Math.min(maxY, (Number(object.y) || 0) + dy));
+    if (nextX === Number(object.x || 0) && nextY === Number(object.y || 0)) return false;
+
+    globalThis.TeacherBoardHistory?.checkpoint?.(data);
+    object.x = nextX;
+    object.y = nextY;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     focusById(id);
     return true;
