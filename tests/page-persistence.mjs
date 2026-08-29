@@ -83,6 +83,25 @@ try {
   });
   assert.equal(await page.locator('.tb-object-text').count(), 1, 'Duplicate page should restore editable object after switch');
 
+  console.log('stage: single-durable-write-path');
+  await flushStore(page);
+  await page.evaluate(() => {
+    const storage = globalThis.TeacherBoardStorage;
+    const originalSave = storage.saveDocument;
+    globalThis.__tbDurableSaveCount = 0;
+    storage.saveDocument = async function countedSave(...args) {
+      globalThis.__tbDurableSaveCount += 1;
+      return originalSave.apply(this, args);
+    };
+  });
+  await page.locator('#mathToggleBtn').click();
+  await page.locator('#backgroundButtons [data-bg="grid"]').click();
+  await flushStore(page);
+  await page.waitForTimeout(100);
+  const durableSaveCount = await page.evaluate(() => globalThis.__tbDurableSaveCount);
+  assert.equal(durableSaveCount, 1, 'A single state change must use one queued IndexedDB persistence path');
+  await page.locator('#closeMathBtn').click();
+
   console.log('stage: indexeddb-durability');
   await flushStore(page);
   const durableBeforeReload = await getDocument(page);
@@ -104,6 +123,7 @@ try {
   assert.equal(recovered.activePage, 1, 'IndexedDB recovery should preserve active page');
   assert.equal(recovered.pages[1].objects?.filter(item => item.kind === 'text').length, 1, 'Recovered page should preserve editable text object');
   assert.ok(recovered.pages[1].image?.startsWith('data:image/png'), 'Recovered page should preserve raster image');
+  assert.equal(recovered.pages[1].background, 'grid', 'Recovered page should preserve the latest background change');
   assert.equal(await page.locator('.page-tab').count(), 2, 'Recovered UI should render both pages');
   assert.equal(await page.locator('.tb-object-text').count(), 1, 'Recovered active page should render editable object');
 
