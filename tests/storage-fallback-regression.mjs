@@ -4,20 +4,12 @@ import assert from 'node:assert/strict';
 const BASE_URL = process.env.TEACHERBOARD_URL || 'http://127.0.0.1:4173/';
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
-const page = await context.newPage();
-const errors = [];
-page.on('pageerror', error => errors.push(String(error)));
 
-try {
-  console.log('stage: seed-legacy-cache');
-  await page.goto(BASE_URL, { waitUntil: 'networkidle' });
-  await page.evaluate(async () => {
-    localStorage.clear();
-    sessionStorage.clear();
-    await new Promise(resolve => {
-      const request = indexedDB.deleteDatabase('teacherboard');
-      request.onsuccess = request.onerror = request.onblocked = () => resolve();
-    });
+await context.addInitScript(() => {
+  try { Object.defineProperty(globalThis, 'indexedDB', { configurable: true, value: undefined }); }
+  catch { globalThis.indexedDB = undefined; }
+
+  if (!localStorage.getItem('teacherboard.fallback.seeded')) {
     localStorage.setItem('teacherboard.v1', JSON.stringify({
       activePage: 0,
       pages: [{
@@ -29,15 +21,17 @@ try {
       }]
     }));
     localStorage.setItem('teacherboard.pageHeights.v1', JSON.stringify([1100]));
-  });
+    localStorage.setItem('teacherboard.fallback.seeded', '1');
+  }
+});
 
-  await context.addInitScript(() => {
-    try { Object.defineProperty(globalThis, 'indexedDB', { configurable: true, value: undefined }); }
-    catch { globalThis.indexedDB = undefined; }
-  });
+const page = await context.newPage();
+const errors = [];
+page.on('pageerror', error => errors.push(String(error)));
 
+try {
   console.log('stage: boot-without-indexeddb');
-  await page.reload({ waitUntil: 'networkidle' });
+  await page.goto(BASE_URL, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => globalThis.TeacherBoardStore && globalThis.TeacherBoardCoreRuntime && document.querySelector('.tb-object-text-content'));
 
   const recovered = await page.evaluate(() => {
@@ -53,7 +47,7 @@ try {
   });
   assert.equal(recovered.idbAvailable, false, 'Test must actually run without IndexedDB');
   assert.equal(recovered.name, 'Fallback', 'Local cache should remain the source when IndexedDB is unavailable');
-  assert.equal(recovered.background, 'grid');
+  assert.equal(recovered.background, 'grid', 'Fallback mode should preserve the legacy page background');
   assert.deepEqual(recovered.objectKinds, ['text'], 'Legacy text should still migrate in fallback mode');
   assert.equal(recovered.objectText, 'Локальний режим');
   assert.equal(recovered.canvasHeight, 1100, 'Legacy page height should remain usable without IndexedDB');
@@ -71,10 +65,12 @@ try {
   const afterWrite = await page.evaluate(() => {
     const data = JSON.parse(localStorage.getItem('teacherboard.v1'));
     return {
+      background: data.pages[0].background,
       hasRaster: typeof data.pages[0].image === 'string' && data.pages[0].image.startsWith('data:image/png'),
       objectText: data.pages[0].objects.find(item => item.kind === 'text')?.text
     };
   });
+  assert.equal(afterWrite.background, 'grid', 'Raster autosave should preserve the fallback page background');
   assert.equal(afterWrite.hasRaster, true, 'Raster changes should still save to local cache');
   assert.equal(afterWrite.objectText, 'Локальний режим', 'Local write-through failure must not lose editable objects');
 
