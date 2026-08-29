@@ -3,7 +3,7 @@ name: Deploy TeacherBoard to GitHub Pages
 on:
   push:
     branches:
-      - refactor-v1
+      - main
   workflow_dispatch:
 
 permissions:
