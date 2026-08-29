@@ -1,0 +1,9 @@
+.top-actions > button,
+.view-actions > button,
+.top-actions > .pen-controls{
+  flex:0 0 auto;
+}
+
+.top-actions .action-btn{
+  white-space:nowrap;
+}
