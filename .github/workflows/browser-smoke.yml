@@ -12,6 +12,7 @@ on:
       - 'tests/browser-smoke.mjs'
       - 'tests/page-persistence.mjs'
       - 'tests/content-regression.mjs'
+      - 'tests/export-regression.mjs'
       - '.github/workflows/browser-smoke.yml'
 
 permissions:
@@ -39,6 +40,7 @@ jobs:
           node --check tests/browser-smoke.mjs
           node --check tests/page-persistence.mjs
           node --check tests/content-regression.mjs
+          node --check tests/export-regression.mjs
           for file in \
             js/state.js \
             js/storage.js \
@@ -83,3 +85,6 @@ jobs:
 
       - name: Run content and legacy migration regression tests
         run: node tests/content-regression.mjs
+
+      - name: Run export regression tests
+        run: node tests/export-regression.mjs
