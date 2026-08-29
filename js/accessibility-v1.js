@@ -21,6 +21,22 @@
     rect: 'Прямокутник', ellipse: 'Коло', text: 'Текст', curtain: 'Шторка', laser: 'Лазерна указка'
   };
 
+  function syncShapeMenuState() {
+    const launcher = document.querySelector('.tb-shape-launcher');
+    const menu = document.querySelector('.tb-shape-menu');
+    if (!launcher || !menu) return;
+    if (!menu.id) menu.id = 'tbShapeMenu';
+    launcher.setAttribute('aria-haspopup', 'menu');
+    launcher.setAttribute('aria-controls', menu.id);
+    launcher.setAttribute('aria-expanded', menu.hidden ? 'false' : 'true');
+    menu.setAttribute('role', 'menu');
+    menu.setAttribute('aria-label', 'Фігури та математичні заготовки');
+    menu.querySelectorAll('[data-shape]').forEach(button => {
+      button.type = 'button';
+      button.setAttribute('role', 'menuitem');
+    });
+  }
+
   function labelControls() {
     Object.entries(labels).forEach(([id, label]) => {
       const el = document.getElementById(id);
@@ -50,6 +66,7 @@
     color?.setAttribute('aria-label', 'Колір інструмента');
     const width = document.getElementById('lineWidth');
     width?.setAttribute('aria-label', 'Товщина лінії');
+    syncShapeMenuState();
   }
 
   function syncPressedStates() {
@@ -59,20 +76,51 @@
     document.querySelectorAll('#backgroundButtons button').forEach(button => {
       button.setAttribute('aria-pressed', button.classList.contains('selected') ? 'true' : 'false');
     });
+    syncShapeMenuState();
+  }
+
+  function closeShapeMenu({ focusLauncher = false } = {}) {
+    const menu = document.querySelector('.tb-shape-menu:not([hidden])');
+    if (!menu) return false;
+    menu.hidden = true;
+    syncShapeMenuState();
+    if (focusLauncher) document.querySelector('.tb-shape-launcher')?.focus();
+    return true;
   }
 
   function bindKeyboard() {
     document.addEventListener('keydown', event => {
+      const shapeMenu = event.target.closest?.('.tb-shape-menu');
+      if (shapeMenu) {
+        const items = [...shapeMenu.querySelectorAll('[role="menuitem"]')];
+        const current = Math.max(0, items.indexOf(document.activeElement));
+        let next = null;
+        if (event.key === 'ArrowDown' || event.key === 'ArrowRight') next = (current + 1) % items.length;
+        if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') next = (current - 1 + items.length) % items.length;
+        if (event.key === 'Home') next = 0;
+        if (event.key === 'End') next = items.length - 1;
+        if (next !== null && items.length) {
+          event.preventDefault();
+          items[next]?.focus();
+          return;
+        }
+      }
+
       if (event.key !== 'Escape') return;
 
-      const shapeMenu = document.querySelector('.tb-shape-menu:not([hidden])');
-      if (shapeMenu) {
-        shapeMenu.hidden = true;
-        document.querySelector('.tb-shape-launcher')?.focus();
+      if (closeShapeMenu({ focusLauncher: true })) {
+        event.preventDefault();
+        return;
       }
 
       const mobileMenu = document.querySelector('.tb-mobile-menu:not([hidden])');
-      if (mobileMenu) mobileMenu.hidden = true;
+      if (mobileMenu) {
+        mobileMenu.hidden = true;
+        const mobileMore = document.querySelector('.tb-mobile-more');
+        mobileMore?.setAttribute('aria-expanded', 'false');
+        mobileMore?.focus();
+        event.preventDefault();
+      }
 
       if (document.body.classList.contains('tb-select-mode')) {
         document.body.classList.remove('tb-has-selection');
@@ -82,7 +130,7 @@
 
   function observeState() {
     const observer = new MutationObserver(() => syncPressedStates());
-    observer.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
+    observer.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class', 'hidden'] });
   }
 
   function init() {
