@@ -20,6 +20,7 @@ on:
       - 'tests/storage-fallback-regression.mjs'
       - 'tests/icons-regression.mjs'
       - 'tests/advanced-interaction-regression.mjs'
+      - 'tests/visual-qa.mjs'
       - '.github/workflows/browser-smoke.yml'
 
 permissions:
@@ -55,6 +56,7 @@ jobs:
           node --check tests/storage-fallback-regression.mjs
           node --check tests/icons-regression.mjs
           node --check tests/advanced-interaction-regression.mjs
+          node --check tests/visual-qa.mjs
           for file in \
             js/state.js \
             js/storage.js \
@@ -125,3 +127,15 @@ jobs:
 
       - name: Run advanced interaction regression tests
         run: node tests/advanced-interaction-regression.mjs
+
+      - name: Capture responsive visual QA
+        run: node tests/visual-qa.mjs
+
+      - name: Upload visual QA artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: teacherboard-visual-qa
+          path: artifacts/visual-qa
+          if-no-files-found: warn
+          retention-days: 14
