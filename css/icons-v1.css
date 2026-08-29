@@ -1,0 +1,79 @@
+.tb-icon{
+  width:1.15rem;
+  height:1.15rem;
+  flex:0 0 auto;
+  display:block;
+  pointer-events:none;
+}
+
+.icon-btn .tb-icon,
+.tb-mobile-more .tb-icon,
+.page-menu-btn .tb-icon,
+.pagebar-toggle .tb-icon,
+.add-page .tb-icon{
+  width:1.25rem;
+  height:1.25rem;
+}
+
+.action-btn,
+.tb-mobile-menu button,
+.page-context-v1 button,
+.tb-selected-properties button,
+.extend-page,
+.tb-shape-menu button{
+  gap:.45rem;
+}
+
+.tb-icon-slot{
+  display:grid;
+  place-items:center;
+}
+
+.tool .tb-icon{
+  width:1.35rem;
+  height:1.35rem;
+}
+
+.tb-shape-menu .tb-icon{
+  width:1rem;
+  height:1rem;
+}
+
+.tb-delete-handle .tb-icon{
+  width:.9rem;
+  height:.9rem;
+}
+
+.extend-page .tb-icon{
+  width:1.05rem;
+  height:1.05rem;
+}
+
+@media (max-width:680px){
+  #insertBtn .tb-icon{
+    width:1.35rem;
+    height:1.35rem;
+  }
+
+  #insertBtn .tb-icon-label{
+    display:none;
+  }
+
+  .extend-page::after{
+    content:none!important;
+  }
+
+  .extend-page .tb-icon{
+    width:1.4rem;
+    height:1.4rem;
+  }
+
+  .extend-page .tb-icon-label{
+    display:none;
+  }
+
+  .tb-mobile-menu button .tb-icon{
+    width:1.1rem;
+    height:1.1rem;
+  }
+}
