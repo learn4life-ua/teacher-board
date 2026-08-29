@@ -34,12 +34,17 @@ try {
   assert.equal(await launcher.getAttribute('aria-expanded'), 'false', 'Escape should collapse the shape menu');
   assert.equal(await page.evaluate(() => document.activeElement?.classList.contains('tb-shape-launcher')), true, 'Escape should return focus to shape launcher');
 
+  await page.keyboard.press('Tab');
   const focusStyle = await page.evaluate(() => {
-    const button = document.getElementById('zoomInBtn');
-    button.focus();
-    const style = getComputedStyle(button);
-    return { outlineStyle: style.outlineStyle, outlineWidth: style.outlineWidth };
+    const active = document.activeElement;
+    const style = getComputedStyle(active);
+    return {
+      tag: active?.tagName,
+      outlineStyle: style.outlineStyle,
+      outlineWidth: style.outlineWidth
+    };
   });
+  assert.equal(focusStyle.tag, 'BUTTON', 'Tab should move to another keyboard-focusable control');
   assert.notEqual(focusStyle.outlineStyle, 'none', 'Keyboard-focusable controls need a visible outline');
   assert.notEqual(focusStyle.outlineWidth, '0px', 'Focus outline must have non-zero width');
   assert.deepEqual(errors, [], `No desktop page errors expected: ${errors.join('\n')}`);
