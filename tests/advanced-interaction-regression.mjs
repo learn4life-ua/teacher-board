@@ -46,7 +46,7 @@ try {
     const transfer = new DataTransfer();
     transfer.items.add(file);
     const event = new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData: transfer });
-    window.dispatchEvent(event);
+    document.body.dispatchEvent(event);
   }, PNG_BASE64);
   await page.locator('.tb-object-image').waitFor({ state: 'visible' });
   let objects = await activeObjects(page);
