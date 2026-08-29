@@ -52,10 +52,10 @@ try {
   assert.deepEqual(renderer.table.labels, ['x','y']);
 
   console.log('stage: preset-insertion');
-  await page.locator('#mathToggleBtn').click();
-  await page.locator('#insertAxesBtn').click({ force: true });
-  await page.locator('#insertNumberLineBtn').click({ force: true });
-  await page.locator('#insertXYTableBtn').click({ force: true });
+  for (const shape of ['axes','number5','xyTable']) {
+    await page.locator('.tb-shape-launcher').click();
+    await page.locator(`.tb-shape-menu [data-shape="${shape}"]`).click();
+  }
   const presetObjects = await page.evaluate(() => {
     const data = JSON.parse(localStorage.getItem('teacherboard.v1'));
     return data.pages[data.activePage].objects.map(item => ({ kind: item.kind, shape: item.shape }));
