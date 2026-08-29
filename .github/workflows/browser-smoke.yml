@@ -14,6 +14,7 @@ on:
       - 'tests/content-regression.mjs'
       - 'tests/export-regression.mjs'
       - 'tests/raster-regression.mjs'
+      - 'tests/math-regression.mjs'
       - '.github/workflows/browser-smoke.yml'
 
 permissions:
@@ -43,6 +44,7 @@ jobs:
           node --check tests/content-regression.mjs
           node --check tests/export-regression.mjs
           node --check tests/raster-regression.mjs
+          node --check tests/math-regression.mjs
           for file in \
             js/state.js \
             js/storage.js \
@@ -93,3 +95,6 @@ jobs:
 
       - name: Run raster tool regression tests
         run: node tests/raster-regression.mjs
+
+      - name: Run math tools regression tests
+        run: node tests/math-regression.mjs
