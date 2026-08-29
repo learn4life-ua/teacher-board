@@ -7,3 +7,15 @@
 .top-actions .action-btn{
   white-space:nowrap;
 }
+
+@media (max-width:1500px){
+  #saveLessonPdfBtn{
+    width:40px;
+    min-width:40px;
+    padding:0;
+  }
+
+  #saveLessonPdfBtn .tb-icon-label{
+    display:none;
+  }
+}
